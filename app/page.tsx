@@ -1,101 +1,156 @@
-import Image from "next/image";
+'use client'
 
-export default function Home() {
+import { useState, useEffect } from 'react'
+import { getSupabase } from '@/lib/supabase'
+import { loadSession } from '@/lib/storage'
+import { loadLocalPrediction } from '@/lib/storage'
+import type { BattleRound, UserSession } from '@/lib/types'
+import HeroSection from '@/components/HeroSection'
+import BattleCard from '@/components/BattleCard'
+import PhoneAuthModal from '@/components/PhoneAuthModal'
+
+export default function HomePage() {
+  const [session, setSession] = useState<UserSession | null>(null)
+  const [rounds, setRounds] = useState<BattleRound[]>([])
+  const [prices, setPrices] = useState<Record<string, { price: number; changePercent: number }>>({})
+  const [showAuth, setShowAuth] = useState(false)
+  const [loading, setLoading] = useState(true)
+
+  // Load session on mount
+  useEffect(() => {
+    setSession(loadSession())
+  }, [])
+
+  // Fetch active battle rounds
+  useEffect(() => {
+    async function fetchRounds() {
+      const sb = getSupabase()
+      if (!sb) return
+
+      const { data, error } = await sb
+        .from('battle_rounds')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(20)
+
+      if (!error && data) setRounds(data as BattleRound[])
+      setLoading(false)
+    }
+    fetchRounds()
+  }, [])
+
+  // Fetch current prices
+  useEffect(() => {
+    if (rounds.length === 0) return
+    async function fetchPrices() {
+      try {
+        const res = await fetch('/api/stocks')
+        if (!res.ok) return
+        const quotes = await res.json() as Array<{ symbol: string; price: number; changePercent: number }>
+        const map: Record<string, { price: number; changePercent: number }> = {}
+        quotes.forEach(q => { map[q.symbol] = { price: q.price, changePercent: q.changePercent } })
+        setPrices(map)
+      } catch { /* ignore */ }
+    }
+    fetchPrices()
+  }, [rounds])
+
+  function handleAuth(s: UserSession) {
+    setSession(s)
+    setShowAuth(false)
+  }
+
+  const activeRounds = rounds.filter(r => r.status === 'active')
+  const endedRounds = rounds.filter(r => r.status === 'ended')
+
   return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="https://nextjs.org/icons/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              app/page.tsx
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+    <main className="relative min-h-screen bg-bg">
+      {showAuth && <PhoneAuthModal onAuth={handleAuth} />}
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
+      <HeroSection session={session} onAuthClick={() => setShowAuth(true)} />
+
+      {/* Battle list */}
+      <section id="battles" className="max-w-4xl mx-auto px-6 py-16">
+        {/* Active battles */}
+        <div className="mb-12">
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <div className="tag text-danger mb-1">// LIVE_BATTLES</div>
+              <h2 className="text-2xl font-bold text-white">진행 중인 배틀</h2>
+            </div>
+            {!session && (
+              <button
+                onClick={() => setShowAuth(true)}
+                className="px-4 py-2 border border-accent text-accent rounded-lg text-sm font-mono hover:bg-accent/10 transition-colors"
+              >
+                참전하기
+              </button>
+            )}
+          </div>
+
+          {loading ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {[1,2,3,4].map(i => (
+                <div key={i} className="bg-surface border border-border rounded-xl p-6 h-48 animate-pulse" />
+              ))}
+            </div>
+          ) : activeRounds.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {activeRounds.map((round, i) => (
+                <BattleCard
+                  key={round.id}
+                  round={round}
+                  currentPrice={prices[round.stock_symbol]?.price}
+                  changePercent={prices[round.stock_symbol]?.changePercent}
+                  userPrediction={loadLocalPrediction(round.id)?.prediction ?? null}
+                  index={i}
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-12 text-muted border border-border rounded-xl bg-surface">
+              <div className="text-4xl mb-3">⏳</div>
+              <p>곧 새로운 배틀이 시작됩니다.</p>
+            </div>
+          )}
+        </div>
+
+        {/* Ended battles */}
+        {endedRounds.length > 0 && (
+          <div>
+            <div className="mb-6">
+              <div className="tag text-muted mb-1">// ENDED_BATTLES</div>
+              <h2 className="text-2xl font-bold text-white">종료된 배틀</h2>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {endedRounds.map((round, i) => (
+                <BattleCard
+                  key={round.id}
+                  round={round}
+                  userPrediction={loadLocalPrediction(round.id)?.prediction ?? null}
+                  index={i}
+                />
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Leaderboard link */}
+        <div className="mt-16 text-center">
           <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+            href="/leaderboard"
+            className="inline-flex items-center gap-2 px-6 py-3 border border-border text-muted rounded-lg hover:border-accent hover:text-accent transition-colors font-mono text-sm"
           >
-            <Image
-              className="dark:invert"
-              src="https://nextjs.org/icons/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
+            🏆 전체 인간 vs AI 전적 보기
           </a>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
+      </section>
+
+      {/* Footer */}
+      <footer className="border-t border-border py-8 text-center text-muted text-xs font-mono">
+        <div className="text-accent mb-1">AI_BATTLE v1.0.0</div>
+        <div>Powered by Claude Sonnet 4.6 × Yahoo Finance</div>
       </footer>
-    </div>
-  );
+    </main>
+  )
 }
