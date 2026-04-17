@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, use } from 'react'
+import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import Link from 'next/link'
 import { getSupabase } from '@/lib/supabase'
@@ -13,11 +13,11 @@ import ResultBanner from '@/components/ResultBanner'
 import PhoneAuthModal from '@/components/PhoneAuthModal'
 
 interface PageProps {
-  params: Promise<{ roundId: string }>
+  params: { roundId: string }
 }
 
 export default function BattleDetailPage({ params }: PageProps) {
-  const { roundId } = use(params)
+  const { roundId } = params
 
   const [round, setRound] = useState<BattleRound | null>(null)
   const [session, setSession] = useState<UserSession | null>(null)
