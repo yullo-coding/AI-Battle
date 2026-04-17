@@ -7,17 +7,17 @@ import type { Direction } from '@/lib/types'
 interface PredictionFormProps {
   onSubmit: (prediction: Direction, periodDays: number) => Promise<void>
   aiPrediction: Direction | null
-  disabled?: boolean
+  needsAuth?: boolean
 }
 
-export default function PredictionForm({ onSubmit, aiPrediction, disabled }: PredictionFormProps) {
+export default function PredictionForm({ onSubmit, aiPrediction, needsAuth }: PredictionFormProps) {
   const [selected, setSelected] = useState<Direction | null>(null)
   const [days, setDays] = useState(3)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
 
   async function handleSubmit() {
-    if (!selected || submitting || disabled) return
+    if (!selected || submitting) return
     setSubmitting(true)
     setError('')
     try {
@@ -30,23 +30,22 @@ export default function PredictionForm({ onSubmit, aiPrediction, disabled }: Pre
 
   return (
     <div className="space-y-6">
-      {/* Direction selector */}
+      {/* Direction selector — always interactive */}
       <div>
         <div className="tag text-muted mb-3">// YOUR_PREDICTION</div>
         <div className="grid grid-cols-2 gap-3">
           {(['UP', 'DOWN'] as Direction[]).map(dir => (
             <motion.button
               key={dir}
-              onClick={() => !disabled && setSelected(dir)}
+              onClick={() => setSelected(dir)}
               whileTap={{ scale: 0.97 }}
-              disabled={disabled}
-              className={`relative py-6 rounded-xl border-2 transition-all duration-200 font-bold text-xl ${
+              className={`relative py-6 rounded-xl border-2 transition-all duration-200 font-bold text-xl cursor-pointer ${
                 selected === dir
                   ? dir === 'UP'
                     ? 'border-up bg-up/10 text-up glow-green'
                     : 'border-down bg-down/10 text-down glow-red'
                   : 'border-border text-muted hover:border-[#333]'
-              } ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+              }`}
             >
               <div className="text-3xl mb-1">{dir === 'UP' ? '▲' : '▼'}</div>
               <div className="font-mono">{dir}</div>
@@ -73,7 +72,6 @@ export default function PredictionForm({ onSubmit, aiPrediction, disabled }: Pre
             max={7}
             value={days}
             onChange={e => setDays(Number(e.target.value))}
-            disabled={disabled}
             className="flex-1 accent-accent cursor-pointer"
           />
           <span className="text-sm text-muted font-mono">7일</span>
@@ -82,11 +80,9 @@ export default function PredictionForm({ onSubmit, aiPrediction, disabled }: Pre
           {[1,2,3,4,5,6,7].map(d => (
             <button
               key={d}
-              onClick={() => !disabled && setDays(d)}
+              onClick={() => setDays(d)}
               className={`w-8 h-8 rounded font-mono text-xs transition-colors ${
-                days === d
-                  ? 'bg-accent text-bg font-bold'
-                  : 'text-muted hover:text-white'
+                days === d ? 'bg-accent text-bg font-bold' : 'text-muted hover:text-white'
               }`}
             >
               {d}
@@ -100,10 +96,10 @@ export default function PredictionForm({ onSubmit, aiPrediction, disabled }: Pre
 
       <motion.button
         onClick={handleSubmit}
-        disabled={!selected || submitting || disabled}
+        disabled={!selected || submitting}
         whileTap={{ scale: 0.98 }}
         className={`w-full py-4 rounded-xl font-bold text-lg transition-all duration-200 ${
-          selected && !submitting && !disabled
+          selected && !submitting
             ? 'bg-accent text-bg btn-pulse cursor-pointer hover:bg-accent-dim'
             : 'bg-border text-muted cursor-not-allowed'
         }`}
@@ -113,6 +109,8 @@ export default function PredictionForm({ onSubmit, aiPrediction, disabled }: Pre
             <span className="w-4 h-4 border-2 border-bg border-t-transparent rounded-full animate-spin" />
             제출 중...
           </span>
+        ) : needsAuth && selected ? (
+          `🔐 ${days}일 ${selected === 'UP' ? '상승' : '하락'} — 인증 후 제출`
         ) : (
           `⚔️ ${selected ? `${days}일 ${selected === 'UP' ? '상승' : '하락'} 예측 제출` : '방향을 선택하세요'}`
         )}

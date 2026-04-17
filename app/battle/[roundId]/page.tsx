@@ -26,6 +26,7 @@ export default function BattleDetailPage({ params }: PageProps) {
   const [stats, setStats] = useState({ upCount: 0, downCount: 0, total: 0 })
   const [submitted, setSubmitted] = useState(false)
   const [loading, setLoading] = useState(true)
+  const [pendingPrediction, setPendingPrediction] = useState<{ prediction: Direction; periodDays: number } | null>(null)
 
   // Load session & local prediction
   useEffect(() => {
@@ -77,6 +78,7 @@ export default function BattleDetailPage({ params }: PageProps) {
 
   async function handlePredictionSubmit(prediction: Direction, periodDays: number) {
     if (!session) {
+      setPendingPrediction({ prediction, periodDays })
       setShowAuth(true)
       return
     }
@@ -97,9 +99,19 @@ export default function BattleDetailPage({ params }: PageProps) {
     }
   }
 
-  function handleAuth(s: UserSession) {
+  async function handleAuth(s: UserSession) {
     setSession(s)
     setShowAuth(false)
+    // 인증 전에 선택한 예측이 있으면 자동 제출
+    if (pendingPrediction) {
+      const { prediction, periodDays } = pendingPrediction
+      setPendingPrediction(null)
+      const result = await submitPrediction(roundId, s.phone, s.nickname, prediction, periodDays)
+      if (result.success) {
+        setMyPrediction({ prediction, periodDays })
+        setSubmitted(true)
+      }
+    }
   }
 
   if (loading) {
@@ -259,14 +271,15 @@ export default function BattleDetailPage({ params }: PageProps) {
           >
             <div className="tag text-muted mb-4">// YOUR_PREDICTION</div>
             {!session && (
-              <div className="mb-4 p-3 bg-accent/10 border border-accent/30 rounded-lg text-sm text-accent">
-                전화번호 인증 후 예측 참여 가능합니다.
+              <div className="mb-4 p-3 bg-accent/10 border border-accent/30 rounded-lg text-sm text-accent flex items-center gap-2">
+                <span>🔐</span>
+                <span>방향 선택 후 제출하면 전화번호 인증 화면이 나옵니다.</span>
               </div>
             )}
             <PredictionForm
               onSubmit={handlePredictionSubmit}
               aiPrediction={round.ai_prediction}
-              disabled={!session}
+              needsAuth={!session}
             />
           </motion.div>
         ) : null}

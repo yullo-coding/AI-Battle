@@ -53,12 +53,12 @@ CREATE POLICY "anon can read battle_predictions"
 CREATE POLICY "anon can insert battle_predictions"
   ON battle_predictions FOR INSERT TO anon WITH CHECK (true);
 
--- RLS 정책: 라운드 생성은 service_role만 (어드민)
-CREATE POLICY "service role can manage battle_rounds"
-  ON battle_rounds FOR ALL TO service_role USING (true);
+-- RLS 정책: anon 배틀 라운드 생성/수정 허용 (어드민 페이지용)
+CREATE POLICY "anon can manage battle_rounds"
+  ON battle_rounds FOR ALL TO anon USING (true) WITH CHECK (true);
 
-CREATE POLICY "service role can update battle_predictions"
-  ON battle_predictions FOR UPDATE TO service_role USING (true);
+CREATE POLICY "anon can update battle_predictions"
+  ON battle_predictions FOR UPDATE TO anon USING (true);
 
 -- ============================================================
 -- 샘플 데이터 (테스트용)

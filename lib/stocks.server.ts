@@ -1,21 +1,26 @@
 import type { StockQuote } from './types'
 import { CURATED_STOCKS } from './stocks'
 
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const YahooFinance = require('yahoo-finance2').default
+const yf = new YahooFinance() as {
+  quote: (symbol: string) => Promise<Record<string, unknown>>
+}
+
 export async function fetchStockQuote(symbol: string): Promise<StockQuote | null> {
   try {
-    const yahooFinance = (await import('yahoo-finance2')).default
-    const quote = await yahooFinance.quote(symbol)
+    const quote = await yf.quote(symbol)
     const meta = CURATED_STOCKS.find(s => s.symbol === symbol)
 
     return {
       symbol,
-      name: meta?.name ?? (quote as { shortName?: string }).shortName ?? symbol,
-      price: (quote as { regularMarketPrice?: number }).regularMarketPrice ?? 0,
-      change: (quote as { regularMarketChange?: number }).regularMarketChange ?? 0,
-      changePercent: (quote as { regularMarketChangePercent?: number }).regularMarketChangePercent ?? 0,
-      high52: (quote as { fiftyTwoWeekHigh?: number }).fiftyTwoWeekHigh ?? 0,
-      low52: (quote as { fiftyTwoWeekLow?: number }).fiftyTwoWeekLow ?? 0,
-      volume: (quote as { regularMarketVolume?: number }).regularMarketVolume ?? 0,
+      name: meta?.name ?? (quote.shortName as string) ?? symbol,
+      price: (quote.regularMarketPrice as number) ?? 0,
+      change: (quote.regularMarketChange as number) ?? 0,
+      changePercent: (quote.regularMarketChangePercent as number) ?? 0,
+      high52: (quote.fiftyTwoWeekHigh as number) ?? 0,
+      low52: (quote.fiftyTwoWeekLow as number) ?? 0,
+      volume: (quote.regularMarketVolume as number) ?? 0,
       market: meta?.market ?? 'US',
     }
   } catch (err) {
