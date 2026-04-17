@@ -64,20 +64,31 @@ async function fetchFearGreed(): Promise<{ value: number; label: string } | null
   }
 }
 
+// 타임아웃 래퍼
+function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error(`timeout after ${ms}ms`)), ms)
+    ),
+  ])
+}
+
 // ─── 종합 분석 (Step 3 대시보드용) ──────────────────────────
 export async function fetchStockAnalysis(symbol: string): Promise<StockAnalysis | null> {
   try {
-    // 병렬 fetch
+    // 병렬 fetch — insights는 느릴 수 있으므로 5초 타임아웃
     const [quote, chartData, summaryData, insightsData, fearGreed] = await Promise.allSettled([
       fetchStockQuote(symbol),
       yf.chart(symbol, {
         period1: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
         interval: '1d',
       }),
-      yf.quoteSummary(symbol, {
-        modules: ['financialData', 'recommendationTrend'],
-      }),
-      yf.insights(symbol),
+      withTimeout(
+        yf.quoteSummary(symbol, { modules: ['financialData', 'recommendationTrend'] }),
+        8000
+      ),
+      withTimeout(yf.insights(symbol), 5000),
       fetchFearGreed(),
     ])
 

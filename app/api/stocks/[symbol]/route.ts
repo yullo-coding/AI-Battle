@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { fetchStockAnalysis } from '@/lib/stocks.server'
 import { CURATED_STOCKS } from '@/lib/stocks'
 
+export const maxDuration = 30  // Vercel 최대 실행시간 30초
+
 export async function GET(
   _req: NextRequest,
   { params }: { params: { symbol: string } }
@@ -16,5 +18,7 @@ export async function GET(
     return NextResponse.json({ error: 'Failed to fetch data' }, { status: 500 })
   }
 
-  return NextResponse.json(analysis)
+  return NextResponse.json(analysis, {
+    headers: { 'Cache-Control': 's-maxage=300, stale-while-revalidate=60' },
+  })
 }

@@ -58,7 +58,7 @@ export default function NewBattlePage() {
       const res = await fetch(`/api/stocks/${sym(symbol)}`)
       if (!res.ok) throw new Error('데이터 조회 실패')
       const data = await res.json()
-      setAnalysis(data.analysis)
+      setAnalysis(data)
     } catch {
       setAnalysisError('주가 데이터를 불러오지 못했습니다. 다시 시도해주세요.')
     }
