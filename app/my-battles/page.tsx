@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { getSupabase } from '@/lib/supabase'
 import { loadSession } from '@/lib/storage'
 import type { Battle, UserSession } from '@/lib/types'
+import { parseBattle } from '@/lib/types'
 import BattleResultCard from '@/components/BattleResultCard'
 import PhoneAuthModal from '@/components/PhoneAuthModal'
 
@@ -37,7 +38,7 @@ export default function MyBattlesPage() {
       .order('created_at', { ascending: false })
       .limit(50)
 
-    if (data) setBattles(data as Battle[])
+    if (data) setBattles(data.map(r => parseBattle(r as Record<string, unknown>)))
     setLoading(false)
   }
 

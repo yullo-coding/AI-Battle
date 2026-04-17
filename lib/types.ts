@@ -81,3 +81,19 @@ export interface UserSession {
   phone: string
   nickname: string
 }
+
+// Supabase DECIMAL 컬럼은 문자열로 반환되므로 Number()로 변환
+export function parseBattle(raw: Record<string, unknown>): Battle {
+  const n = (v: unknown) => (v != null ? Number(v) : null)
+  return {
+    ...raw,
+    start_price:           Number(raw.start_price),
+    user_change_percent:   n(raw.user_change_percent),
+    ai_change_percent:     n(raw.ai_change_percent),
+    ai_confidence:         n(raw.ai_confidence),
+    end_price:             n(raw.end_price),
+    actual_change_percent: n(raw.actual_change_percent),
+    user_error:            n(raw.user_error),
+    ai_error:              n(raw.ai_error),
+  } as Battle
+}

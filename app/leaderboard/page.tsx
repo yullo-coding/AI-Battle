@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { motion } from 'framer-motion'
 import { getSupabase } from '@/lib/supabase'
 import type { Battle } from '@/lib/types'
+import { parseBattle } from '@/lib/types'
 import { formatPercent } from '@/lib/stocks'
 
 interface StockStat {
@@ -31,7 +32,7 @@ export default function LeaderboardPage() {
         .eq('status', 'resolved')
         .order('created_at', { ascending: false })
 
-      if (data) setBattles(data as Battle[])
+      if (data) setBattles(data.map(r => parseBattle(r as Record<string, unknown>)))
       setLoading(false)
     }
     fetchData()

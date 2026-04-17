@@ -5,6 +5,7 @@ import { motion } from 'framer-motion'
 import Link from 'next/link'
 import { getSupabase } from '@/lib/supabase'
 import type { Battle } from '@/lib/types'
+import { parseBattle } from '@/lib/types'
 import BattleResultCard from '@/components/BattleResultCard'
 
 export default function BattleResultPage({ params }: { params: { roundId: string } }) {
@@ -30,7 +31,7 @@ export default function BattleResultPage({ params }: { params: { roundId: string
       return
     }
 
-    const b = data as Battle
+    const b = parseBattle(data as Record<string, unknown>)
     setBattle(b)
     setLoading(false)
 

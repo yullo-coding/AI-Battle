@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { getSupabase } from '@/lib/supabase'
 import { formatPrice, formatPercent } from '@/lib/stocks'
 import type { Battle } from '@/lib/types'
+import { parseBattle } from '@/lib/types'
 
 export default function AdminPage() {
   const [battles, setBattles] = useState<Battle[]>([])
@@ -20,7 +21,7 @@ export default function AdminPage() {
       .select('*')
       .order('created_at', { ascending: false })
       .limit(100)
-    if (data) setBattles(data as Battle[])
+    if (data) setBattles(data.map(r => parseBattle(r as Record<string, unknown>)))
     setLoading(false)
   }
 
