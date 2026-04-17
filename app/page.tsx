@@ -1,67 +1,49 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { motion } from 'framer-motion'
+import Link from 'next/link'
 import { getSupabase } from '@/lib/supabase'
-import { loadSession } from '@/lib/storage'
-import { loadLocalPrediction } from '@/lib/storage'
-import type { BattleRound, UserSession } from '@/lib/types'
+import { loadSession, saveSession } from '@/lib/storage'
+import type { Battle, UserSession } from '@/lib/types'
 import HeroSection from '@/components/HeroSection'
-import BattleCard from '@/components/BattleCard'
+import BattleResultCard from '@/components/BattleResultCard'
 import PhoneAuthModal from '@/components/PhoneAuthModal'
 
 export default function HomePage() {
   const [session, setSession] = useState<UserSession | null>(null)
-  const [rounds, setRounds] = useState<BattleRound[]>([])
-  const [prices, setPrices] = useState<Record<string, { price: number; changePercent: number }>>({})
   const [showAuth, setShowAuth] = useState(false)
-  const [loading, setLoading] = useState(true)
+  const [battles, setBattles] = useState<Battle[]>([])
+  const [loading, setLoading] = useState(false)
 
-  // Load session on mount
   useEffect(() => {
-    setSession(loadSession())
+    const s = loadSession()
+    setSession(s)
+    if (s) loadRecentBattles(s.phone)
   }, [])
 
-  // Fetch active battle rounds
-  useEffect(() => {
-    async function fetchRounds() {
-      const sb = getSupabase()
-      if (!sb) return
+  async function loadRecentBattles(phone: string) {
+    setLoading(true)
+    const sb = getSupabase()
+    if (!sb) { setLoading(false); return }
 
-      const { data, error } = await sb
-        .from('battle_rounds')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(20)
+    const { data } = await sb
+      .from('battles')
+      .select('*')
+      .eq('phone', phone)
+      .order('created_at', { ascending: false })
+      .limit(3)
 
-      if (!error && data) setRounds(data as BattleRound[])
-      setLoading(false)
-    }
-    fetchRounds()
-  }, [])
-
-  // Fetch current prices
-  useEffect(() => {
-    if (rounds.length === 0) return
-    async function fetchPrices() {
-      try {
-        const res = await fetch('/api/stocks')
-        if (!res.ok) return
-        const quotes = await res.json() as Array<{ symbol: string; price: number; changePercent: number }>
-        const map: Record<string, { price: number; changePercent: number }> = {}
-        quotes.forEach(q => { map[q.symbol] = { price: q.price, changePercent: q.changePercent } })
-        setPrices(map)
-      } catch { /* ignore */ }
-    }
-    fetchPrices()
-  }, [rounds])
+    if (data) setBattles(data as Battle[])
+    setLoading(false)
+  }
 
   function handleAuth(s: UserSession) {
     setSession(s)
     setShowAuth(false)
+    saveSession(s)
+    loadRecentBattles(s.phone)
   }
-
-  const activeRounds = rounds.filter(r => r.status === 'active')
-  const endedRounds = rounds.filter(r => r.status === 'ended')
 
   return (
     <main className="relative min-h-screen bg-bg">
@@ -69,86 +51,109 @@ export default function HomePage() {
 
       <HeroSection session={session} onAuthClick={() => setShowAuth(true)} />
 
-      {/* Battle list */}
-      <section id="battles" className="max-w-4xl mx-auto px-6 py-16">
-        {/* Active battles */}
-        <div className="mb-12">
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <div className="tag text-danger mb-1">// LIVE_BATTLES</div>
-              <h2 className="text-2xl font-bold text-white">진행 중인 배틀</h2>
+      {/* CTA section */}
+      <section className="max-w-lg mx-auto px-6 py-16 space-y-12">
+
+        {/* Start battle CTA */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          className="text-center space-y-4"
+        >
+          <div className="tag text-accent">// NEW_BATTLE</div>
+          <p className="text-muted text-sm">종목 선택 → 지표 확인 → % 예측 → AI와 대결</p>
+          <Link
+            href="/battle/new"
+            onClick={() => { if (!session) setShowAuth(true) }}
+            className="inline-block px-10 py-4 bg-accent text-bg font-bold text-lg rounded-xl btn-pulse hover:bg-accent-dim transition-colors"
+          >
+            ⚔️ 배틀 시작하기
+          </Link>
+        </motion.div>
+
+        {/* How it works */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          className="space-y-3"
+        >
+          <div className="tag text-muted mb-4">// HOW_IT_WORKS</div>
+          {[
+            { step: '01', label: '종목 선택', desc: '삼성전자 · NVIDIA · Alphabet 중 선택' },
+            { step: '02', label: '날짜 선택', desc: '내일~7일 후 중 결과 확인 날짜 선택' },
+            { step: '03', label: '지표 확인', desc: 'RSI · MACD · 볼린저 · 애널리스트 분석' },
+            { step: '04', label: '% 예측', desc: '-15% ~ +15% 슬라이더로 등락률 예측' },
+            { step: '05', label: 'AI 대결', desc: 'Claude Sonnet 4.6이 자체 예측 생성' },
+            { step: '06', label: '승부 판정', desc: '실제 종가에 더 가깝게 맞춘 쪽이 승리!' },
+          ].map((item, i) => (
+            <motion.div
+              key={item.step}
+              initial={{ opacity: 0, x: -20 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: i * 0.06 }}
+              className="flex items-start gap-4 p-4 bg-surface border border-border rounded-xl"
+            >
+              <div className="text-accent font-mono text-xs font-bold w-6 flex-shrink-0 mt-0.5">{item.step}</div>
+              <div>
+                <div className="font-bold text-white text-sm">{item.label}</div>
+                <div className="text-muted text-xs mt-0.5">{item.desc}</div>
+              </div>
+            </motion.div>
+          ))}
+        </motion.div>
+
+        {/* Recent battles (if logged in) */}
+        {session && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="space-y-4"
+          >
+            <div className="flex items-center justify-between">
+              <div className="tag text-accent">// RECENT_BATTLES</div>
+              <Link href="/my-battles" className="text-xs text-muted font-mono hover:text-accent transition-colors">
+                전체 보기 →
+              </Link>
             </div>
-            {!session && (
-              <button
-                onClick={() => setShowAuth(true)}
-                className="px-4 py-2 border border-accent text-accent rounded-lg text-sm font-mono hover:bg-accent/10 transition-colors"
-              >
-                참전하기
-              </button>
+
+            {loading ? (
+              <div className="space-y-3">
+                {[1, 2].map(i => (
+                  <div key={i} className="h-32 bg-surface border border-border rounded-xl animate-pulse" />
+                ))}
+              </div>
+            ) : battles.length > 0 ? (
+              <div className="space-y-4">
+                {battles.map(b => (
+                  <BattleResultCard key={b.id} battle={b} />
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8 border border-border rounded-xl text-muted text-sm">
+                아직 참여한 배틀이 없습니다. 첫 배틀을 시작해보세요!
+              </div>
             )}
-          </div>
-
-          {loading ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {[1,2,3,4].map(i => (
-                <div key={i} className="bg-surface border border-border rounded-xl p-6 h-48 animate-pulse" />
-              ))}
-            </div>
-          ) : activeRounds.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {activeRounds.map((round, i) => (
-                <BattleCard
-                  key={round.id}
-                  round={round}
-                  currentPrice={prices[round.stock_symbol]?.price}
-                  changePercent={prices[round.stock_symbol]?.changePercent}
-                  userPrediction={loadLocalPrediction(round.id)?.prediction ?? null}
-                  index={i}
-                />
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-12 text-muted border border-border rounded-xl bg-surface">
-              <div className="text-4xl mb-3">⏳</div>
-              <p>곧 새로운 배틀이 시작됩니다.</p>
-            </div>
-          )}
-        </div>
-
-        {/* Ended battles */}
-        {endedRounds.length > 0 && (
-          <div>
-            <div className="mb-6">
-              <div className="tag text-muted mb-1">// ENDED_BATTLES</div>
-              <h2 className="text-2xl font-bold text-white">종료된 배틀</h2>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {endedRounds.map((round, i) => (
-                <BattleCard
-                  key={round.id}
-                  round={round}
-                  userPrediction={loadLocalPrediction(round.id)?.prediction ?? null}
-                  index={i}
-                />
-              ))}
-            </div>
-          </div>
+          </motion.div>
         )}
 
         {/* Leaderboard link */}
-        <div className="mt-16 text-center">
-          <a
+        <div className="text-center">
+          <Link
             href="/leaderboard"
             className="inline-flex items-center gap-2 px-6 py-3 border border-border text-muted rounded-lg hover:border-accent hover:text-accent transition-colors font-mono text-sm"
           >
-            🏆 전체 인간 vs AI 전적 보기
-          </a>
+            🏆 인간 vs AI 전체 전적
+          </Link>
         </div>
       </section>
 
       {/* Footer */}
       <footer className="border-t border-border py-8 text-center text-muted text-xs font-mono">
-        <div className="text-accent mb-1">AI_BATTLE v1.0.0</div>
+        <div className="text-accent mb-1">AI_BATTLE v2.0.0</div>
         <div>Powered by Claude Sonnet 4.6 × Yahoo Finance</div>
       </footer>
     </main>

@@ -1,118 +1,160 @@
-import type { Direction, StockQuote } from './types'
+import type { StockAnalysis, AIReasoning } from './types'
+import { bollingerPosition, rsiLabel, macdSignal } from './indicators'
+import { formatPrice } from './stocks'
 
 export interface AIPrediction {
-  prediction: Direction
-  confidence: number
-  reasoning: string
+  change_percent: number   // 양수=상승, 음수=하락
+  confidence: number       // 60~90
+  brief: string
+  reasoning: AIReasoning
   mode: 'claude' | 'rule-based'
 }
 
-// ─── 룰베이스 예측 (로컬 / API 키 없을 때) ───────────────────────
-function ruleBasedPrediction(quote: StockQuote): AIPrediction {
-  const pricePosition = quote.high52 > 0
-    ? (quote.price - quote.low52) / (quote.high52 - quote.low52)
-    : 0.5
-
+// ─── Rule-based fallback ─────────────────────────────────────
+function ruleBasedPrediction(analysis: StockAnalysis): AIPrediction {
+  const { quote, rsi14, macd, bollinger, ma20, ma50 } = analysis
+  let score = 0
   const signals: string[] = []
-  let score = 0 // 양수 = UP, 음수 = DOWN
 
-  // 52주 위치: 저점 근처면 반등 기대, 고점 근처면 조정 경계
-  if (pricePosition < 0.25) {
-    score += 2
-    signals.push(`52주 저점 근처 (${Math.round(pricePosition * 100)}%) — 반등 기대`)
-  } else if (pricePosition > 0.80) {
-    score -= 1
-    signals.push(`52주 고점 근처 (${Math.round(pricePosition * 100)}%) — 조정 경계`)
-  } else {
-    signals.push(`52주 중간 위치 (${Math.round(pricePosition * 100)}%)`)
-  }
+  // RSI
+  if (rsi14 < 30) { score += 2; signals.push(`RSI ${rsi14} 과매도 → 반등 기대`) }
+  else if (rsi14 > 70) { score -= 2; signals.push(`RSI ${rsi14} 과매수 → 조정 경계`) }
+  else if (rsi14 > 55) { score += 1; signals.push(`RSI ${rsi14} 강세 유지`) }
+  else { signals.push(`RSI ${rsi14} 중립`) }
 
-  // 전일 등락: 과도한 하락은 반등, 과도한 상승은 숨고르기
-  if (quote.changePercent < -5) {
-    score += 2
-    signals.push(`전일 급락 ${quote.changePercent.toFixed(1)}% — 단기 반등 가능`)
-  } else if (quote.changePercent > 5) {
-    score -= 1
-    signals.push(`전일 급등 +${quote.changePercent.toFixed(1)}% — 단기 숨고르기 가능`)
-  } else if (quote.changePercent > 0) {
-    score += 1
-    signals.push(`전일 소폭 상승 +${quote.changePercent.toFixed(1)}% — 모멘텀 유지`)
-  } else {
-    score -= 1
-    signals.push(`전일 소폭 하락 ${quote.changePercent.toFixed(1)}% — 약세 흐름`)
-  }
+  // MACD
+  if (macd.histogram > 0) { score += 1; signals.push('MACD 히스토그램 양전 → 매수 신호') }
+  else { score -= 1; signals.push('MACD 히스토그램 음전 → 매도 신호') }
 
-  // 거래량 (100만 이상이면 관심 증가로 판단)
-  if (quote.volume > 10_000_000) {
-    score += score > 0 ? 1 : -1 // 방향 강화
-    signals.push(`거래량 ${(quote.volume / 1_000_000).toFixed(0)}M — 높은 관심`)
-  }
+  // 볼린저
+  const bPos = bollingerPosition(quote.price, bollinger)
+  if (quote.price <= bollinger.lower) { score += 2; signals.push(`볼린저 하단 이탈 → ${bPos}`) }
+  else if (quote.price >= bollinger.upper) { score -= 1; signals.push(`볼린저 상단 돌파 → ${bPos}`) }
+  else { signals.push(`볼린저 ${bPos}`) }
 
-  const prediction: Direction = score >= 0 ? 'UP' : 'DOWN'
-  const confidence = Math.min(82, Math.max(62, 65 + Math.abs(score) * 4))
+  // MA
+  if (quote.price > ma20 && ma20 > ma50) { score += 1; signals.push('가격 > MA20 > MA50 정배열') }
+  else if (quote.price < ma20 && ma20 < ma50) { score -= 1; signals.push('가격 < MA20 < MA50 역배열') }
+
+  // 전일 등락
+  if (quote.changePercent < -3) { score += 1; signals.push(`전일 ${quote.changePercent.toFixed(1)}% 급락 → 단기 반등`) }
+  else if (quote.changePercent > 3) { score -= 1; signals.push(`전일 +${quote.changePercent.toFixed(1)}% 급등 → 숨고르기`) }
+
+  const direction = score >= 0 ? 1 : -1
+  const magnitude = Math.min(8, Math.max(1, Math.abs(score) * 1.2))
+  const change_percent = parseFloat((direction * magnitude).toFixed(1))
+  const confidence = Math.min(80, Math.max(60, 62 + Math.abs(score) * 3))
 
   return {
-    prediction,
+    change_percent,
     confidence,
-    reasoning: signals.join('. ') + '. (룰베이스 테스트 모드)',
+    brief: `${change_percent >= 0 ? '▲' : '▼'} ${Math.abs(change_percent)}% 예측 — ${signals[0]}`,
+    reasoning: {
+      technical: signals.slice(0, 3).join('. '),
+      sentiment: analysis.fearGreedValue != null
+        ? `공포탐욕지수 ${analysis.fearGreedValue} (${analysis.fearGreedLabel})`
+        : '시장 심리 데이터 없음',
+      risk: '룰베이스 모드 — API 키 미설정 시 적용',
+      conclusion: signals.join('. '),
+    },
     mode: 'rule-based',
   }
 }
 
-// ─── Claude API 예측 (프로덕션) ──────────────────────────────────
-async function claudePrediction(quote: StockQuote): Promise<AIPrediction> {
+// ─── Claude API 예측 ─────────────────────────────────────────
+async function claudePrediction(analysis: StockAnalysis): Promise<AIPrediction> {
   const { default: Anthropic } = await import('@anthropic-ai/sdk')
   const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
-  const pricePosition = quote.high52 > 0
+  const { quote, rsi14, macd, bollinger, ma20, ma50,
+    analystTargetPrice, analystRecommendation, analystCount,
+    analystBuyCount, analystHoldCount, analystSellCount,
+    fearGreedValue, fearGreedLabel, recentNews } = analysis
+
+  const pricePos = quote.high52 > 0
     ? Math.round(((quote.price - quote.low52) / (quote.high52 - quote.low52)) * 100)
     : 50
 
-  const prompt = `당신은 퀀트 트레이딩 AI입니다. 다음 주식 데이터를 분석하고 단기 방향을 예측하세요.
+  const newsText = recentNews.length > 0
+    ? recentNews.map(n => `• ${n.headline}`).join('\n')
+    : '뉴스 없음'
+
+  const analystText = analystTargetPrice
+    ? `목표가 ${formatPrice(analystTargetPrice, quote.market)} (현재 대비 ${(((analystTargetPrice - quote.price) / quote.price) * 100).toFixed(1)}%), 추천 ${analystRecommendation}, 의견 ${analystCount}명 (매수 ${analystBuyCount} / 중립 ${analystHoldCount} / 매도 ${analystSellCount})`
+    : '애널리스트 데이터 없음'
+
+  const prompt = `당신은 퀀트 트레이더입니다. 아래 데이터를 분석해 주식의 단기 등락률을 예측하세요.
 
 종목: ${quote.name} (${quote.symbol})
-현재가: ${quote.price.toLocaleString()} ${quote.market === 'KR' ? 'KRW' : 'USD'}
-전일 대비: ${quote.change >= 0 ? '+' : ''}${quote.changePercent.toFixed(2)}%
-52주 고가: ${quote.high52.toLocaleString()}
-52주 저가: ${quote.low52.toLocaleString()}
-52주 위치: 저가 대비 ${pricePosition}% 위치
-거래량: ${(quote.volume / 1000000).toFixed(2)}M
+현재가: ${formatPrice(quote.price, quote.market)}
+전일 대비: ${quote.changePercent >= 0 ? '+' : ''}${quote.changePercent.toFixed(2)}%
+시가/고가/저가: ${formatPrice(quote.open, quote.market)} / ${formatPrice(quote.high, quote.market)} / ${formatPrice(quote.low, quote.market)}
+52주 고/저: ${formatPrice(quote.high52, quote.market)} / ${formatPrice(quote.low52, quote.market)} (현재 위치 ${pricePos}%)
+거래량: ${(quote.volume / 1_000_000).toFixed(1)}M (평균 대비 ${quote.avgVolume > 0 ? ((quote.volume / quote.avgVolume) * 100).toFixed(0) : '?'}%)
+
+[기술적 지표]
+RSI(14): ${rsi14} → ${rsiLabel(rsi14)}
+MACD 히스토그램: ${macd.histogram.toFixed(3)} → ${macdSignal(macd.histogram)}
+볼린저 밴드: 상단 ${formatPrice(bollinger.upper, quote.market)} / 중간 ${formatPrice(bollinger.middle, quote.market)} / 하단 ${formatPrice(bollinger.lower, quote.market)}
+볼린저 위치: ${bollingerPosition(quote.price, bollinger)}
+MA20: ${formatPrice(ma20, quote.market)} (${quote.price > ma20 ? '현재가 위' : '현재가 아래'})
+MA50: ${formatPrice(ma50, quote.market)} (${quote.price > ma50 ? '현재가 위' : '현재가 아래'})
+
+[전문가 분석]
+${analystText}
+
+[시장 심리]
+공포탐욕지수: ${fearGreedValue ?? '?'} (${fearGreedLabel ?? '데이터 없음'})
+
+[최근 뉴스]
+${newsText}
 
 다음 JSON 형식으로만 응답하세요 (다른 텍스트 없이):
 {
-  "prediction": "UP" 또는 "DOWN",
-  "confidence": 65~90 사이의 정수,
-  "reasoning": "3~4문장으로 한국어 분석. 구체적인 수치 근거 포함."
+  "change_percent": 단기 예상 등락률 숫자 (예: 3.2 = +3.2%, -1.5 = -1.5%, 소수점 1자리),
+  "confidence": 60~90 사이 정수,
+  "brief": "한 줄 요약 (20자 이내)",
+  "reasoning": {
+    "technical": "기술적 지표 해석 2~3문장",
+    "sentiment": "시장 심리 해석 1~2문장",
+    "risk": "주요 리스크 요인 1~2문장",
+    "conclusion": "종합 결론 2문장"
+  }
 }`
 
   const message = await client.messages.create({
     model: 'claude-sonnet-4-6',
-    max_tokens: 400,
+    max_tokens: 600,
     messages: [{ role: 'user', content: prompt }],
   })
 
-  const text = message.content[0].type === 'text' ? message.content[0].text : ''
+  const text = message.content[0].type === 'text' ? message.content[0].text.trim() : '{}'
+  const parsed = JSON.parse(text)
 
-  const parsed = JSON.parse(text.trim())
   return {
-    prediction: parsed.prediction === 'UP' ? 'UP' : 'DOWN',
-    confidence: Math.min(90, Math.max(65, parsed.confidence)),
-    reasoning: parsed.reasoning,
+    change_percent: parseFloat(parseFloat(parsed.change_percent).toFixed(1)),
+    confidence: Math.min(90, Math.max(60, parseInt(parsed.confidence))),
+    brief: parsed.brief ?? '',
+    reasoning: {
+      technical: parsed.reasoning?.technical ?? '',
+      sentiment: parsed.reasoning?.sentiment ?? '',
+      risk: parsed.reasoning?.risk ?? '',
+      conclusion: parsed.reasoning?.conclusion ?? '',
+    },
     mode: 'claude',
   }
 }
 
-// ─── 진입점: API 키 있으면 Claude, 없으면 룰베이스 ────────────────
-export async function generateAIPrediction(quote: StockQuote): Promise<AIPrediction> {
+// ─── 진입점 ──────────────────────────────────────────────────
+export async function generateAIPrediction(analysis: StockAnalysis): Promise<AIPrediction> {
   if (!process.env.ANTHROPIC_API_KEY) {
-    console.log('[ai-predict] ANTHROPIC_API_KEY 없음 → 룰베이스 모드')
-    return ruleBasedPrediction(quote)
+    console.log('[ai] API 키 없음 → 룰베이스 모드')
+    return ruleBasedPrediction(analysis)
   }
-
   try {
-    return await claudePrediction(quote)
+    return await claudePrediction(analysis)
   } catch (err) {
-    console.error('[ai-predict] Claude API 실패, 룰베이스로 폴백:', err)
-    return ruleBasedPrediction(quote)
+    console.error('[ai] Claude API 실패, 룰베이스 폴백:', err)
+    return ruleBasedPrediction(analysis)
   }
 }
