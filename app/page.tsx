@@ -54,24 +54,6 @@ export default function HomePage() {
       {/* CTA section */}
       <section className="max-w-lg mx-auto px-6 py-16 space-y-12">
 
-        {/* Start battle CTA */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          className="text-center space-y-4"
-        >
-          <div className="tag text-accent">// NEW_BATTLE</div>
-          <p className="text-muted text-sm">종목 선택 → 지표 확인 → % 예측 → AI와 대결</p>
-          <Link
-            href="/battle/new"
-            onClick={() => { if (!session) setShowAuth(true) }}
-            className="inline-block px-10 py-4 bg-accent text-bg font-bold text-lg rounded-xl btn-pulse hover:bg-accent-dim transition-colors"
-          >
-            ⚔️ 배틀 시작하기
-          </Link>
-        </motion.div>
-
         {/* How it works */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}

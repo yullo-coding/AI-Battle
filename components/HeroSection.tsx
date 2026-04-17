@@ -122,7 +122,7 @@ export default function HeroSection({ session, onAuthClick }: HeroSectionProps) 
                 안녕하세요, <span className="text-accent">{session.nickname}</span>님
               </div>
               <a
-                href="#battles"
+                href="/battle/new"
                 className="px-10 py-4 bg-accent text-bg font-bold text-lg rounded-xl btn-pulse hover:bg-accent-dim transition-colors"
               >
                 ⚔️ 배틀 시작하기
