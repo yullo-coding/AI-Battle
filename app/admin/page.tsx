@@ -192,7 +192,7 @@ function BattleRow({
           {b.winner && <span className={`font-bold ${winnerColor}`}>{b.winner}</span>}
         </div>
         <div className="text-xs text-muted/60 font-mono mt-0.5">
-          {b.phone.replace(/(\d{3})(\d{4})(\d{4})/, '$1-$2-$3')} · {b.id.slice(0, 8)}
+          {b.email} · {b.id.slice(0, 8)}
         </div>
       </div>
 

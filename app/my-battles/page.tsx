@@ -8,7 +8,7 @@ import { loadSession } from '@/lib/storage'
 import type { Battle, UserSession } from '@/lib/types'
 import { parseBattle } from '@/lib/types'
 import BattleResultCard from '@/components/BattleResultCard'
-import PhoneAuthModal from '@/components/PhoneAuthModal'
+import EmailAuthModal from '@/components/EmailAuthModal'
 
 export default function MyBattlesPage() {
   const [session, setSession] = useState<UserSession | null>(null)
@@ -20,13 +20,13 @@ export default function MyBattlesPage() {
     const s = loadSession()
     setSession(s)
     if (s) {
-      loadBattles(s.phone)
+      loadBattles(s.email)
     } else {
       setLoading(false)
     }
   }, [])
 
-  async function loadBattles(phone: string) {
+  async function loadBattles(email: string) {
     setLoading(true)
     const sb = getSupabase()
     if (!sb) { setLoading(false); return }
@@ -34,7 +34,7 @@ export default function MyBattlesPage() {
     const { data } = await sb
       .from('battles')
       .select('*')
-      .eq('phone', phone)
+      .eq('email', email)
       .order('created_at', { ascending: false })
       .limit(50)
 
@@ -45,7 +45,7 @@ export default function MyBattlesPage() {
   function handleAuth(s: UserSession) {
     setSession(s)
     setShowAuth(false)
-    loadBattles(s.phone)
+    loadBattles(s.email)
   }
 
   // Stats
@@ -56,7 +56,7 @@ export default function MyBattlesPage() {
 
   return (
     <main className="min-h-screen bg-bg">
-      {showAuth && <PhoneAuthModal onAuth={handleAuth} />}
+      {showAuth && <EmailAuthModal onAuth={handleAuth} />}
 
       {/* Nav */}
       <div className="border-b border-border bg-surface/50">
@@ -89,7 +89,7 @@ export default function MyBattlesPage() {
               onClick={() => setShowAuth(true)}
               className="px-6 py-3 bg-accent text-bg font-bold rounded-lg hover:bg-accent-dim transition-colors"
             >
-              전화번호로 로그인
+              이메일로 로그인
             </button>
           </div>
         ) : loading ? (

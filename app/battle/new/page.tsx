@@ -12,7 +12,7 @@ import DateSelector from '@/components/DateSelector'
 import StockInfoPanel from '@/components/StockInfoPanel'
 import PercentSlider from '@/components/PercentSlider'
 import AIPredictionResult from '@/components/AIPredictionResult'
-import PhoneAuthModal from '@/components/PhoneAuthModal'
+import EmailAuthModal from '@/components/EmailAuthModal'
 
 type Step = 1 | 2 | 3 | 4 | 5 | 6
 
@@ -76,10 +76,10 @@ export default function NewBattlePage() {
       setShowAuth(true)
       return
     }
-    await submitBattle(session.phone)
+    await submitBattle(session.email)
   }
 
-  async function submitBattle(phone: string) {
+  async function submitBattle(email: string) {
     setSubmitting(true)
     setSubmitError('')
     setStep(5)
@@ -94,7 +94,7 @@ export default function NewBattlePage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          phone,
+          email,
           symbol,
           endDate,
           userChangePercent: userPercent,
@@ -131,12 +131,12 @@ export default function NewBattlePage() {
   function handleAuth(s: UserSession) {
     setSession(s)
     setShowAuth(false)
-    submitBattle(s.phone)
+    submitBattle(s.email)
   }
 
   return (
     <main className="min-h-screen bg-bg">
-      {showAuth && <PhoneAuthModal onAuth={handleAuth} />}
+      {showAuth && <EmailAuthModal onAuth={handleAuth} />}
 
       {/* Nav */}
       <div className="border-b border-border bg-surface/50 sticky top-0 z-10">
@@ -239,7 +239,7 @@ export default function NewBattlePage() {
 
                 {!session && (
                   <p className="text-xs text-muted text-center">
-                    제출 시 전화번호 인증이 필요합니다.
+                    제출 시 이메일 인증이 필요합니다.
                   </p>
                 )}
               </div>

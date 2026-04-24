@@ -1,7 +1,7 @@
 // ─── 배틀 ────────────────────────────────────────────────────
 export interface Battle {
   id: string
-  phone: string
+  email: string
 
   stock_symbol: string
   stock_name: string
@@ -78,6 +78,7 @@ export interface StockAnalysis {
 
 // ─── 세션 ────────────────────────────────────────────────────
 export interface UserSession {
+  email: string
   phone: string
   nickname: string
 }

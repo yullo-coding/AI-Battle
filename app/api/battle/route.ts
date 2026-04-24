@@ -6,14 +6,14 @@ import { CURATED_STOCKS } from '@/lib/stocks'
 
 export async function POST(req: NextRequest) {
   try {
-    const { phone, symbol, endDate, userChangePercent } = await req.json() as {
-      phone: string
+    const { email, symbol, endDate, userChangePercent } = await req.json() as {
+      email: string
       symbol: string
       endDate: string         // 'YYYY-MM-DD'
       userChangePercent: number
     }
 
-    if (!phone || !symbol || !endDate || userChangePercent === undefined) {
+    if (!email || !symbol || !endDate || userChangePercent === undefined) {
       return NextResponse.json({ error: '필수 필드 누락' }, { status: 400 })
     }
 
@@ -34,7 +34,7 @@ export async function POST(req: NextRequest) {
     // Supabase에 저장
     const sb = getSupabaseServer()
     const { data, error } = await sb.from('battles').insert({
-      phone,
+      email,
       stock_symbol: symbol,
       stock_name: stock.name,
       stock_market: stock.market,

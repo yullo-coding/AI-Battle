@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { authenticatePhone, saveSession } from '@/lib/storage'
 import type { UserSession } from '@/lib/types'
+import Input from '@vibe/design-system/components/ui/Input'
 
 interface PhoneAuthModalProps {
   onAuth: (session: UserSession) => void
@@ -93,23 +94,19 @@ export default function PhoneAuthModal({ onAuth }: PhoneAuthModalProps) {
           ) : (
             <motion.form key="form" onSubmit={handleSubmit}>
               <div className="mb-6">
-                <label className="block text-sm text-muted mb-2 font-mono">
-                  PHONE_NUMBER
-                </label>
-                <input
+                <Input
                   type="tel"
+                  label="PHONE_NUMBER"
                   value={phone}
                   onChange={e => {
                     setPhone(formatPhone(e.target.value))
                     setError('')
                   }}
                   placeholder="010-0000-0000"
-                  className="w-full px-4 py-3 rounded-lg font-mono text-lg bg-surface-2 border border-border text-white placeholder-[#333] focus:border-accent focus:ring-0"
+                  error={error}
+                  mono
                   autoFocus
                 />
-                {error && (
-                  <p className="mt-2 text-sm text-danger">{error}</p>
-                )}
               </div>
 
               <button

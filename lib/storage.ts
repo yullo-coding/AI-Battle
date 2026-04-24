@@ -25,24 +25,27 @@ export function clearSession() {
   safeLS()?.removeItem(KEYS.session)
 }
 
-// ─── 전화번호 인증 ─────────────────────────────────────────────
-export async function authenticatePhone(phone: string): Promise<{ success: boolean; isNew: boolean }> {
+// ─── 이메일 인증 ───────────────────────────────────────────────
+export async function authenticateEmail(
+  email: string,
+  phone?: string
+): Promise<{ success: boolean; isNew: boolean; phone?: string }> {
   const sb = getSupabase()
   if (!sb) return { success: false, isNew: false }
 
   const { data: existing } = await sb
     .from('signups')
-    .select('phone')
-    .eq('phone', phone)
+    .select('email, phone')
+    .eq('email', email)
     .maybeSingle()
 
   if (existing) {
-    saveSession({ phone, nickname: formatNickname(phone) })
-    return { success: true, isNew: false }
+    return { success: true, isNew: false, phone: existing.phone ?? '' }
   }
 
   const { error } = await sb.from('signups').insert({
-    phone,
+    email,
+    phone: phone ?? '',
     selected_options: ['B'],
     option_labels: ['AI 배틀'],
     timestamp: Date.now(),
@@ -53,10 +56,12 @@ export async function authenticatePhone(phone: string): Promise<{ success: boole
     return { success: false, isNew: false }
   }
 
-  saveSession({ phone, nickname: formatNickname(phone) })
-  return { success: true, isNew: true }
+  return { success: true, isNew: true, phone: phone ?? '' }
 }
 
-function formatNickname(phone: string): string {
-  return `트레이더${phone.slice(-4)}`
+function formatNickname(email: string): string {
+  const local = email.split('@')[0]
+  return `트레이더${local.slice(-4)}`
 }
+
+export { formatNickname }
