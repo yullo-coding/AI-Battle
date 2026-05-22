@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import Link from 'next/link'
 import { getSupabase } from '@/lib/supabase'
-import { loadSession } from '@/lib/storage'
+import { loadSession, clearSession } from '@/lib/storage'
 import type { Battle, UserSession } from '@/lib/types'
 import { parseBattle } from '@/lib/types'
 import BattleResultCard from '@/components/BattleResultCard'
@@ -48,6 +48,12 @@ export default function MyBattlesPage() {
     loadBattles(s.email)
   }
 
+  function handleLogout() {
+    clearSession()
+    setSession(null)
+    setBattles([])
+  }
+
   // Stats
   const resolved = battles.filter(b => b.status === 'resolved')
   const wins = resolved.filter(b => b.winner === 'USER').length
@@ -56,19 +62,8 @@ export default function MyBattlesPage() {
 
   return (
     <main className="min-h-screen bg-bg">
-      {showAuth && <EmailAuthModal onAuth={handleAuth} />}
+      {showAuth && <EmailAuthModal onAuth={handleAuth} onClose={() => setShowAuth(false)} />}
 
-      {/* Nav */}
-      <div className="border-b border-border bg-surface/50">
-        <div className="max-w-lg mx-auto px-6 py-4 flex items-center justify-between">
-          <Link href="/" className="text-muted text-xs font-mono hover:text-white transition-colors">
-            ← 홈
-          </Link>
-          <Link href="/battle/new" className="text-accent text-xs font-mono hover:text-accent-dim transition-colors">
-            새 배틀 ⚔️
-          </Link>
-        </div>
-      </div>
 
       <div className="max-w-lg mx-auto px-6 py-8">
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>

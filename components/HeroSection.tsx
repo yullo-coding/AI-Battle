@@ -24,23 +24,12 @@ const STATS = [
 interface HeroSectionProps {
   session: UserSession | null
   onAuthClick: () => void
+  onLogout: () => void
 }
 
-export default function HeroSection({ session, onAuthClick }: HeroSectionProps) {
-  const [time, setTime] = useState('')
+export default function HeroSection({ session, onAuthClick, onLogout }: HeroSectionProps) {
   const [tickerPos, setTickerPos] = useState(0)
   const tickerRef = useRef<NodeJS.Timeout | null>(null)
-
-  useEffect(() => {
-    const updateTime = () => {
-      setTime(new Date().toLocaleTimeString('ko-KR', {
-        hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit'
-      }))
-    }
-    updateTime()
-    const id = setInterval(updateTime, 1000)
-    return () => clearInterval(id)
-  }, [])
 
   useEffect(() => {
     tickerRef.current = setInterval(() => {
@@ -55,16 +44,6 @@ export default function HeroSection({ session, onAuthClick }: HeroSectionProps) 
 
   return (
     <section className="relative min-h-screen flex flex-col grid-bg scanlines overflow-hidden">
-      {/* Top bar */}
-      <div className="flex items-center justify-between px-6 py-4 border-b border-border bg-surface/50 relative z-10">
-        <div className="font-mono text-xs text-muted">
-          <span className="text-accent">AI_BATTLE</span>
-          <span className="mx-2">//</span>
-          <span>v1.0.0</span>
-        </div>
-        <div className="font-mono text-xs text-accent">{time}</div>
-      </div>
-
       {/* Ticker */}
       <div className="relative overflow-hidden border-b border-border bg-surface/30 py-2">
         <div
@@ -118,8 +97,14 @@ export default function HeroSection({ session, onAuthClick }: HeroSectionProps) 
           {/* CTA */}
           {session ? (
             <div className="flex flex-col items-center gap-3">
-              <div className="text-sm text-muted font-mono">
-                안녕하세요, <span className="text-accent">{session.nickname}</span>님
+              <div className="flex items-center gap-3 text-sm font-mono text-muted">
+                <span>안녕하세요, <span className="text-accent">{session.nickname}</span>님</span>
+                <button
+                  onClick={onLogout}
+                  className="text-xs text-muted/60 hover:text-danger transition-colors underline underline-offset-2"
+                >
+                  로그아웃
+                </button>
               </div>
               <a
                 href="/battle/new"

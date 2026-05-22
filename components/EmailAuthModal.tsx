@@ -8,6 +8,7 @@ import Input from '@vibe/design-system/components/ui/Input'
 
 interface EmailAuthModalProps {
   onAuth: (session: UserSession) => void
+  onClose?: () => void
 }
 
 type ModalStep = 'email' | 'phone' | 'submitting' | 'success'
@@ -15,6 +16,7 @@ type ModalStep = 'email' | 'phone' | 'submitting' | 'success'
 function isValidEmail(email: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
 }
+
 
 function formatPhone(value: string): string {
   const digits = value.replace(/\D/g, '').slice(0, 11)
@@ -27,7 +29,7 @@ function isValidPhone(phone: string): boolean {
   return /^010-\d{4}-\d{4}$/.test(phone)
 }
 
-export default function EmailAuthModal({ onAuth }: EmailAuthModalProps) {
+export default function EmailAuthModal({ onAuth, onClose }: EmailAuthModalProps) {
   const [email, setEmail] = useState('')
   const [phone, setPhone] = useState('')
   const [modalStep, setModalStep] = useState<ModalStep>('email')
@@ -41,50 +43,34 @@ export default function EmailAuthModal({ onAuth }: EmailAuthModalProps) {
     setModalStep('submitting')
     setError('')
 
-    const { data: existing } = await (async () => {
-      const { getSupabase } = await import('@/lib/supabase')
-      const sb = getSupabase()
-      if (!sb) return { data: null }
-      return sb.from('signups').select('email, phone').eq('email', email).maybeSingle()
-    })()
-
-    if (existing) {
-      // 기존 유저 → 바로 로그인
-      const session: UserSession = {
-        email,
-        phone: existing.phone ?? '',
-        nickname: formatNickname(email),
-      }
-      saveSession(session)
-      setIsNew(false)
-      setModalStep('success')
-      setTimeout(() => onAuth(session), 1200)
-    } else {
-      // 신규 유저 → 전화번호 입력 단계
-      setIsNew(true)
-      setModalStep('phone')
-    }
-  }
-
-  async function handlePhoneSubmit(e: React.FormEvent) {
-    e.preventDefault()
-    if (!isValidPhone(phone)) return
-
-    setModalStep('submitting')
-    setError('')
-
-    const rawPhone = phone.replace(/-/g, '')
-    const result = await authenticateEmail(email, rawPhone)
+    const result = await authenticateEmail(email)
 
     if (!result.success) {
-      setError('가입에 실패했습니다. 다시 시도해주세요.')
+      setError('오류가 발생했습니다. 다시 시도해주세요.')
+      setModalStep('email')
+      return
+    }
+
+    if (result.isNew) {
+      setIsNew(true)
       setModalStep('phone')
       return
     }
 
+    completeLogin(result.phone ?? '')
+  }
+
+  async function handlePhoneSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    const rawPhone = isValidPhone(phone) ? phone.replace(/-/g, '') : ''
+    await authenticateEmail(email, rawPhone || undefined)
+    completeLogin(rawPhone)
+  }
+
+  function completeLogin(phone: string) {
     const session: UserSession = {
       email,
-      phone: rawPhone,
+      phone,
       nickname: formatNickname(email),
     }
     saveSession(session)
@@ -97,14 +83,22 @@ export default function EmailAuthModal({ onAuth }: EmailAuthModalProps) {
       <motion.div
         initial={{ opacity: 0, scale: 0.95, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
-        className="w-full max-w-md bg-surface border border-border rounded-xl p-8"
+        className="relative w-full max-w-md bg-surface border border-border rounded-xl p-8"
       >
+        {onClose && (
+          <button
+            onClick={onClose}
+            className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center text-muted hover:text-white transition-colors rounded-lg hover:bg-white/10"
+          >
+            ✕
+          </button>
+        )}
         <div className="mb-8">
           <div className="tag text-accent mb-3">// BATTLE_ACCESS</div>
           <h2 className="text-2xl font-bold text-white mb-2">이메일로 참전하기</h2>
           <p className="text-muted text-sm">
             {modalStep === 'phone'
-              ? '처음 오셨군요! 연락처를 남겨주세요.'
+              ? '처음 오셨군요! 연락처를 남겨주시면 소식을 드려요.'
               : '이메일 주소로 전적이 관리됩니다.'}
           </p>
         </div>
@@ -130,31 +124,25 @@ export default function EmailAuthModal({ onAuth }: EmailAuthModalProps) {
               animate={{ opacity: 1, x: 0 }}
               onSubmit={handlePhoneSubmit}
             >
-              <div className="mb-2">
-                <div className="text-xs text-muted font-mono mb-4">
-                  <span className="text-accent">{email}</span>
-                </div>
+              <div className="text-xs text-muted font-mono mb-4">
+                <span className="text-accent">{email}</span>
               </div>
-              <div className="mb-6">
+              <div className="mb-4">
                 <Input
                   type="tel"
-                  label="PHONE_NUMBER"
+                  label="PHONE_NUMBER (선택)"
                   value={phone}
-                  onChange={e => {
-                    setPhone(formatPhone(e.target.value))
-                    setError('')
-                  }}
+                  onChange={e => setPhone(formatPhone(e.target.value))}
                   placeholder="010-0000-0000"
-                  error={error}
                   mono
                   autoFocus
                 />
               </div>
               <button
                 type="submit"
-                disabled={!isValidPhone(phone)}
+                disabled={phone.length > 0 && !isValidPhone(phone)}
                 className={`w-full py-4 rounded-lg font-bold text-lg transition-all duration-200 ${
-                  isValidPhone(phone)
+                  phone.length === 0 || isValidPhone(phone)
                     ? 'bg-accent text-bg btn-pulse cursor-pointer hover:bg-accent-dim'
                     : 'bg-border text-muted cursor-not-allowed'
                 }`}
@@ -163,10 +151,10 @@ export default function EmailAuthModal({ onAuth }: EmailAuthModalProps) {
               </button>
               <button
                 type="button"
-                onClick={() => setModalStep('email')}
+                onClick={() => completeLogin('')}
                 className="w-full mt-3 py-2 text-sm text-muted font-mono hover:text-white transition-colors"
               >
-                ← 이메일 변경
+                건너뛰기 →
               </button>
             </motion.form>
           ) : (

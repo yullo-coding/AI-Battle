@@ -4,11 +4,11 @@ import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import Link from 'next/link'
 import { getSupabase } from '@/lib/supabase'
-import { loadSession, saveSession } from '@/lib/storage'
+import { loadSession, saveSession, clearSession } from '@/lib/storage'
 import type { Battle, UserSession } from '@/lib/types'
 import HeroSection from '@/components/HeroSection'
 import BattleResultCard from '@/components/BattleResultCard'
-import PhoneAuthModal from '@/components/PhoneAuthModal'
+import EmailAuthModal from '@/components/EmailAuthModal'
 
 export default function HomePage() {
   const [session, setSession] = useState<UserSession | null>(null)
@@ -19,10 +19,10 @@ export default function HomePage() {
   useEffect(() => {
     const s = loadSession()
     setSession(s)
-    if (s) loadRecentBattles(s.phone)
+    if (s) loadRecentBattles(s.email)
   }, [])
 
-  async function loadRecentBattles(phone: string) {
+  async function loadRecentBattles(email: string) {
     setLoading(true)
     const sb = getSupabase()
     if (!sb) { setLoading(false); return }
@@ -30,7 +30,7 @@ export default function HomePage() {
     const { data } = await sb
       .from('battles')
       .select('*')
-      .eq('phone', phone)
+      .eq('email', email)
       .order('created_at', { ascending: false })
       .limit(3)
 
@@ -42,14 +42,20 @@ export default function HomePage() {
     setSession(s)
     setShowAuth(false)
     saveSession(s)
-    loadRecentBattles(s.phone)
+    loadRecentBattles(s.email)
+  }
+
+  function handleLogout() {
+    clearSession()
+    setSession(null)
+    setBattles([])
   }
 
   return (
     <main className="relative min-h-screen bg-bg">
-      {showAuth && <PhoneAuthModal onAuth={handleAuth} />}
+      {showAuth && <EmailAuthModal onAuth={handleAuth} onClose={() => setShowAuth(false)} />}
 
-      <HeroSection session={session} onAuthClick={() => setShowAuth(true)} />
+      <HeroSection session={session} onAuthClick={() => setShowAuth(true)} onLogout={handleLogout} />
 
       {/* CTA section */}
       <section className="max-w-lg mx-auto px-6 py-16 space-y-12">

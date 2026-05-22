@@ -19,6 +19,6 @@ export async function GET(
   }
 
   return NextResponse.json(analysis, {
-    headers: { 'Cache-Control': 's-maxage=300, stale-while-revalidate=60' },
+    headers: { 'Cache-Control': 'no-store' },
   })
 }
