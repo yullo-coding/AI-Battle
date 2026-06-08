@@ -43,6 +43,9 @@ export default function Header() {
           </Link>
 
           <nav className="flex items-center gap-4">
+            <Link href="/leaderboard" className="text-xs font-mono text-muted hover:text-white transition-colors">
+              랭킹
+            </Link>
             <Link href="/my-battles" className="text-xs font-mono text-muted hover:text-white transition-colors">
               내 배틀
             </Link>

@@ -6,6 +6,7 @@ import type { StockAnalysis } from '@/lib/types'
 import type { Battle } from '@/lib/types'
 import type { AIPrediction } from '@/lib/claude'
 import { loadSession } from '@/lib/storage'
+import { formatPrice } from '@/lib/stocks'
 import type { UserSession } from '@/lib/types'
 import StockSelector from '@/components/StockSelector'
 import DateSelector from '@/components/DateSelector'
@@ -59,10 +60,16 @@ export default function NewBattlePage() {
       .catch(() => { setAnalysisError('주가 데이터를 불러오지 못했습니다. 다시 시도해주세요.'); setAnalysisLoading(false) })
   }
 
-  // Step 2 → 3: 분석 + 예측 입력 통합 화면
+  // Step 2 → 3: Step 3 진입 시 최신 데이터로 재fetch
   function handleSelectDate(date: string) {
     setEndDate(date)
     setStep(3)
+    setAnalysisLoading(true)
+    setAnalysisError('')
+    fetch(`/api/stocks/${encodeURIComponent(symbol)}`)
+      .then(res => { if (!res.ok) throw new Error(); return res.json() })
+      .then(data => { setAnalysis(data); setAnalysisLoading(false) })
+      .catch(() => { setAnalysisError('주가 데이터를 불러오지 못했습니다. 다시 시도해주세요.'); setAnalysisLoading(false) })
   }
 
   async function handleSubmitPrediction() {
@@ -184,6 +191,13 @@ export default function NewBattlePage() {
                         }`}>
                           {userPercent > 0 ? '+' : ''}{userPercent.toFixed(1)}%
                         </span>
+                        {analysis && (
+                          <span className={`text-sm font-bold font-mono ${
+                            userPercent > 0 ? 'text-up/80' : userPercent < 0 ? 'text-down/80' : 'text-muted/60'
+                          }`}>
+                            → {formatPrice(analysis.quote.price * (1 + userPercent / 100), analysis.quote.market)}
+                          </span>
+                        )}
                         <span className="text-xs text-muted/50 font-mono">{endDate}</span>
                       </div>
                       <span className="text-muted text-xs font-mono">
