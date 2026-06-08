@@ -58,7 +58,15 @@ async function fetchFearGreed(): Promise<{ value: number; label: string } | null
     const json = await res.json() as { data: Array<{ value: string; value_classification: string }> }
     const item = json.data?.[0]
     if (!item) return null
-    return { value: parseInt(item.value), label: item.value_classification }
+    const labelMap: Record<string, string> = {
+      'Extreme Fear': '극도의 공포',
+      'Fear': '공포',
+      'Neutral': '중립',
+      'Greed': '탐욕',
+      'Extreme Greed': '극도의 탐욕',
+    }
+    const label = labelMap[item.value_classification] ?? item.value_classification
+    return { value: parseInt(item.value), label }
   } catch {
     return null
   }

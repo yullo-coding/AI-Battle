@@ -62,9 +62,9 @@ function ruleBasedPrediction(analysis: StockAnalysis): AIPrediction {
 }
 
 // ─── Claude API 예측 ─────────────────────────────────────────
-async function claudePrediction(analysis: StockAnalysis): Promise<AIPrediction> {
+async function claudePrediction(analysis: StockAnalysis, apiKey?: string): Promise<AIPrediction> {
   const { default: Anthropic } = await import('@anthropic-ai/sdk')
-  const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
+  const client = new Anthropic({ apiKey: apiKey ?? process.env.ANTHROPIC_API_KEY })
 
   const { quote, rsi14, macd, bollinger, ma20, ma50,
     analystTargetPrice, analystRecommendation, analystCount,
@@ -146,13 +146,14 @@ ${newsText}
 }
 
 // ─── 진입점 ──────────────────────────────────────────────────
-export async function generateAIPrediction(analysis: StockAnalysis): Promise<AIPrediction> {
-  if (!process.env.ANTHROPIC_API_KEY) {
+export async function generateAIPrediction(analysis: StockAnalysis, apiKey?: string): Promise<AIPrediction> {
+  const key = apiKey ?? process.env.ANTHROPIC_API_KEY
+  if (!key) {
     console.log('[ai] API 키 없음 → 룰베이스 모드')
     return ruleBasedPrediction(analysis)
   }
   try {
-    return await claudePrediction(analysis)
+    return await claudePrediction(analysis, key)
   } catch (err) {
     console.error('[ai] Claude API 실패, 룰베이스 폴백:', err)
     return ruleBasedPrediction(analysis)

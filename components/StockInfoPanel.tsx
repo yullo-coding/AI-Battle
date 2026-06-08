@@ -56,7 +56,7 @@ export default function StockInfoPanel({ analysis, endDate }: StockInfoPanelProp
   const buyCount = signals.filter(s => s === 'buy').length
   const sellCount = signals.filter(s => s === 'sell').length
   const overallSignal: SignalType = buyCount > sellCount ? 'buy' : sellCount > buyCount ? 'sell' : 'neutral'
-  const overallLabel = overallSignal === 'buy' ? '📈 상승 우세' : overallSignal === 'sell' ? '📉 하락 우세' : '↔️ 혼조세'
+  const overallLabel = overallSignal === 'buy' ? '📈 상승 우세' : overallSignal === 'sell' ? '📉 하락 우세' : '↔️ 방향 불분명'
   const overallDesc = overallSignal === 'buy'
     ? `${buyCount}개 지표 상승 신호`
     : overallSignal === 'sell'
@@ -228,13 +228,13 @@ export default function StockInfoPanel({ analysis, endDate }: StockInfoPanelProp
 
             <div className="h-px bg-border/50" />
 
-            {/* 이동평균 */}
+            {/* 이동평균선 */}
             <div className="flex items-center justify-between">
               <div>
-                <div className="text-sm font-bold text-white">이동평균</div>
+                <div className="text-sm font-bold text-white">이동평균선</div>
                 <div className="flex gap-3 text-xs text-muted mt-0.5">
-                  <span>MA20 <span className={`font-mono font-bold ${quote.price > ma20 ? 'text-up' : 'text-down'}`}>{quote.price > ma20 ? '↑ 위' : '↓ 아래'}</span></span>
-                  <span>MA50 <span className={`font-mono font-bold ${quote.price > ma50 ? 'text-up' : 'text-down'}`}>{quote.price > ma50 ? '↑ 위' : '↓ 아래'}</span></span>
+                  <span>20일선 <span className={`font-mono font-bold ${quote.price > ma20 ? 'text-up' : 'text-down'}`}>{quote.price > ma20 ? '↑ 위' : '↓ 아래'}</span></span>
+                  <span>50일선 <span className={`font-mono font-bold ${quote.price > ma50 ? 'text-up' : 'text-down'}`}>{quote.price > ma50 ? '↑ 위' : '↓ 아래'}</span></span>
                 </div>
               </div>
               <SignalBadge signal={maSignal} />

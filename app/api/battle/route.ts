@@ -6,11 +6,12 @@ import { CURATED_STOCKS } from '@/lib/stocks'
 
 export async function POST(req: NextRequest) {
   try {
-    const { email, symbol, endDate, userChangePercent } = await req.json() as {
+    const { email, symbol, endDate, userChangePercent, apiKey } = await req.json() as {
       email: string
       symbol: string
-      endDate: string         // 'YYYY-MM-DD'
+      endDate: string
       userChangePercent: number
+      apiKey?: string
     }
 
     if (!email || !symbol || !endDate || userChangePercent === undefined) {
@@ -28,8 +29,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: '주가 데이터 조회 실패' }, { status: 500 })
     }
 
-    // AI 예측 생성
-    const aiPrediction = await generateAIPrediction(analysis)
+    // AI 예측 생성 (유저 API 키 있으면 우선 사용)
+    const aiPrediction = await generateAIPrediction(analysis, apiKey)
 
     // Supabase에 저장
     const sb = getSupabaseServer()

@@ -6,6 +6,7 @@ import type { StockAnalysis } from '@/lib/types'
 import type { Battle } from '@/lib/types'
 import type { AIPrediction } from '@/lib/claude'
 import { loadSession } from '@/lib/storage'
+import { loadApiSettings } from '@/lib/apiSettings'
 import { formatPrice } from '@/lib/stocks'
 import type { UserSession } from '@/lib/types'
 import StockSelector from '@/components/StockSelector'
@@ -14,6 +15,7 @@ import StockInfoPanel from '@/components/StockInfoPanel'
 import PercentSlider from '@/components/PercentSlider'
 import AIPredictionResult from '@/components/AIPredictionResult'
 import EmailAuthModal from '@/components/EmailAuthModal'
+import ApiSetupModal from '@/components/ApiSetupModal'
 
 type Step = 1 | 2 | 3 | 4 | 5
 
@@ -39,6 +41,7 @@ export default function NewBattlePage() {
   const [submitting, setSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState('')
   const [predExpanded, setPredExpanded] = useState(false)
+  const [showApiSetup, setShowApiSetup] = useState(false)
 
   useEffect(() => {
     setSession(loadSession())
@@ -77,6 +80,10 @@ export default function NewBattlePage() {
       setShowAuth(true)
       return
     }
+    if (!loadApiSettings()) {
+      setShowApiSetup(true)
+      return
+    }
     await submitBattle(session.email)
   }
 
@@ -93,7 +100,10 @@ export default function NewBattlePage() {
       const res = await fetch('/api/battle', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, symbol, endDate, userChangePercent: userPercent }),
+        body: JSON.stringify({
+          email, symbol, endDate, userChangePercent: userPercent,
+          apiKey: loadApiSettings()?.apiKey,
+        }),
       })
 
       clearTimeout(stepTimer1)
@@ -129,6 +139,9 @@ export default function NewBattlePage() {
   return (
     <main className="min-h-screen bg-bg">
       {showAuth && <EmailAuthModal onAuth={handleAuth} onClose={() => setShowAuth(false)} />}
+      {showApiSetup && (
+        <ApiSetupModal onDone={() => { setShowApiSetup(false); if (session) submitBattle(session.email) }} />
+      )}
 
       {/* Step indicator */}
       <div className="border-b border-border bg-surface/50">

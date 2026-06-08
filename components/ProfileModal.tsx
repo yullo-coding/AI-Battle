@@ -1,8 +1,9 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { saveSession, clearSession, updateNickname } from '@/lib/storage'
+import { loadApiSettings, saveApiSettings, maskApiKey, type ApiMode } from '@/lib/apiSettings'
 import type { UserSession } from '@/lib/types'
 
 interface ProfileModalProps {
@@ -16,6 +17,15 @@ export default function ProfileModal({ session, onClose, onLogout, onUpdate }: P
   const [nickname, setNickname] = useState(session.nickname)
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
+  const [apiMode, setApiMode] = useState<ApiMode>('own')
+  const [apiKey, setApiKey] = useState('')
+  const [apiSaved, setApiSaved] = useState(false)
+  const [editingKey, setEditingKey] = useState(false)
+
+  useEffect(() => {
+    const s = loadApiSettings()
+    if (s) { setApiMode(s.mode); setApiKey(s.apiKey ?? '') }
+  }, [])
 
   async function handleSave() {
     if (!nickname.trim() || nickname === session.nickname) return
@@ -79,6 +89,63 @@ export default function ProfileModal({ session, onClose, onLogout, onUpdate }: P
               {saving ? '...' : saved ? '✓' : '저장'}
             </button>
           </div>
+        </div>
+
+        {/* AI 설정 */}
+        <div className="mb-5 pt-4 border-t border-border/50">
+          <div className="text-xs font-mono text-muted mb-3">AI 설정</div>
+          <div className="space-y-2">
+            <label className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-all ${apiMode === 'own' ? 'border-accent/50 bg-accent/5' : 'border-border'}`}>
+              <input type="radio" name="apiMode" value="own" checked={apiMode === 'own'}
+                onChange={() => { setApiMode('own'); setApiSaved(false) }}
+                className="mt-0.5 accent-[#00FF88]" />
+              <div className="flex-1 min-w-0">
+                <div className="text-sm font-bold text-white">내 API 키</div>
+                {apiMode === 'own' && (
+                  <div className="mt-2">
+                    {editingKey || !apiKey ? (
+                      <input
+                        type="password"
+                        value={apiKey}
+                        onChange={e => setApiKey(e.target.value)}
+                        placeholder="sk-ant-api03-..."
+                        className="w-full bg-bg border border-border rounded-lg px-2 py-1.5 text-xs font-mono text-white placeholder:text-muted/50 focus:outline-none focus:border-accent transition-colors"
+                        autoFocus
+                      />
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-mono text-muted">{maskApiKey(apiKey)}</span>
+                        <button onClick={() => setEditingKey(true)} className="text-xs text-accent font-mono hover:underline">변경</button>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </label>
+
+            <label className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-all ${apiMode === 'service' ? 'border-accent/50 bg-accent/5' : 'border-border'}`}>
+              <input type="radio" name="apiMode" value="service" checked={apiMode === 'service'}
+                onChange={() => { setApiMode('service'); setApiSaved(false) }}
+                className="mt-0.5 accent-[#00FF88]" />
+              <div>
+                <div className="text-sm font-bold text-white">서비스 API</div>
+                <div className="text-xs text-muted mt-0.5">배틀당 결제 · 준비 중 🚧</div>
+              </div>
+            </label>
+          </div>
+
+          <button
+            onClick={() => {
+              saveApiSettings({ mode: apiMode, apiKey: apiMode === 'own' ? apiKey : undefined })
+              setEditingKey(false)
+              setApiSaved(true)
+              setTimeout(() => setApiSaved(false), 2000)
+            }}
+            disabled={apiMode === 'own' && !apiKey}
+            className="mt-3 w-full py-2 text-xs font-mono rounded-lg border border-accent/50 text-accent hover:bg-accent/10 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            {apiSaved ? '✓ 저장됨' : 'AI 설정 저장'}
+          </button>
         </div>
 
         {/* Logout */}
