@@ -11,6 +11,7 @@ import { formatPrice, formatPercent } from '@/lib/stocks'
 import CountdownTimer from '@/components/CountdownTimer'
 import Button from '@vibe/design-system/components/ui/Button'
 import { useLocale } from '@/components/LocaleProvider'
+import { localizedBattleToolName } from '@/lib/aiTools'
 
 type PageState = 'loading' | 'ready-to-resolve' | 'resolving' | 'done' | 'error'
 
@@ -20,6 +21,7 @@ export default function BattleResultPage() {
   const [battle, setBattle] = useState<Battle | null>(null)
   const [pageState, setPageState] = useState<PageState>('loading')
   const [errorMsg, setErrorMsg] = useState('')
+  const aiToolName = battle ? localizedBattleToolName(battle.ai_tool_id, battle.ai_tool_name, locale) : tr('AI 도구', 'AI tool')
 
   const loadBattle = useCallback(async (id: string) => {
     setPageState('loading')
@@ -141,7 +143,7 @@ export default function BattleResultPage() {
                   </div>
                 </div>
                 <div className="p-3 rounded-lg bg-bg border border-ai/20">
-                  <div className="text-xs font-mono text-ai mb-1">{battle.ai_tool_name ?? tr('AI 도구', 'AI tool')} {tr('예측', 'prediction')}</div>
+                  <div className="text-xs font-mono text-[#A78BFA] mb-1">{aiToolName} {tr('예측', 'prediction')}</div>
                   <div className={`text-xl font-black font-mono ${(battle.ai_change_percent ?? 0) >= 0 ? 'text-up' : 'text-down'}`}>
                     {formatPercent(battle.ai_change_percent ?? 0)}
                   </div>
@@ -194,7 +196,8 @@ export default function BattleResultPage() {
 
 // ─── 상세 결과 컴포넌트 ──────────────────────────────────────
 function BattleDetail({ battle }: { battle: Battle }) {
-  const { tr } = useLocale()
+  const { locale, tr } = useLocale()
+  const aiToolName = localizedBattleToolName(battle.ai_tool_id, battle.ai_tool_name, locale)
   const mkt = battle.stock_market as 'US' | 'KR'
   const isPending = battle.status === 'pending'
   const endDatetime = `${battle.end_date}T23:59:59+09:00`
@@ -260,7 +263,7 @@ function BattleDetail({ battle }: { battle: Battle }) {
             )}
           </div>
           <div className="px-4">
-            <div className="text-xs font-mono text-muted mb-1">{battle.ai_tool_name ?? tr('AI 도구', 'AI tool')} {tr('예측', 'prediction')}</div>
+            <div className="text-xs font-mono text-muted mb-1">{aiToolName} {tr('예측', 'prediction')}</div>
             <div className="text-2xl font-black font-mono text-[#A78BFA]">
               {formatPercent(aiPct)}
             </div>

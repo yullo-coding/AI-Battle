@@ -5,7 +5,7 @@ import Link from 'next/link'
 import Button from '@vibe/design-system/components/ui/Button'
 import Input from '@vibe/design-system/components/ui/Input'
 import type { AITool } from '@/lib/types'
-import { fetchAITools, toolAvailability } from '@/lib/aiTools'
+import { fetchAITools, localizedTool, toolAvailability } from '@/lib/aiTools'
 import AIToolCard from '@/components/AIToolCard'
 import { useLocale } from '@/components/LocaleProvider'
 
@@ -14,7 +14,7 @@ type PricingFilter = 'all' | 'free' | 'freemium' | 'paid'
 type SortOption = 'recommended' | 'rating' | 'likes' | 'reviews' | 'newest'
 
 export default function ToolsPage() {
-  const { tr } = useLocale()
+  const { locale, tr } = useLocale()
   const [tools, setTools] = useState<AITool[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -37,7 +37,8 @@ export default function ToolsPage() {
       if (availability === 'review' && battleReady) return false
       if (pricing !== 'all' && tool.pricing !== pricing) return false
       if (market !== 'all' && !tool.supported_markets.includes(market)) return false
-      if (keyword && !`${tool.name} ${tool.tagline} ${tool.description}`.toLowerCase().includes(keyword)) return false
+      const copy = localizedTool(tool, locale)
+      if (keyword && !`${tool.name} ${tool.name_en ?? ''} ${tool.tagline} ${tool.tagline_en ?? ''} ${tool.description} ${tool.description_en ?? ''} ${copy.name} ${copy.tagline}`.toLowerCase().includes(keyword)) return false
       return true
     })
 
@@ -48,7 +49,7 @@ export default function ToolsPage() {
       if (sort === 'newest') return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
       return Number(b.is_featured) - Number(a.is_featured) || Number(toolAvailability(b).battleReady) - Number(toolAvailability(a).battleReady)
     })
-  }, [tools, query, availability, pricing, market, sort])
+  }, [tools, query, availability, pricing, market, sort, locale])
 
   const hasFilters = Boolean(query || availability !== 'all' || pricing !== 'all' || market !== 'all' || sort !== 'recommended')
   function resetFilters() {

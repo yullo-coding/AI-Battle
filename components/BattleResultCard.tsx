@@ -6,6 +6,7 @@ import type { Battle } from '@/lib/types'
 import { formatPercent } from '@/lib/stocks'
 import CountdownTimer from './CountdownTimer'
 import { useLocale } from '@/components/LocaleProvider'
+import { localizedBattleToolName } from '@/lib/aiTools'
 
 interface BattleResultCardProps {
   battle: Battle
@@ -13,7 +14,8 @@ interface BattleResultCardProps {
 }
 
 export default function BattleResultCard({ battle, showLink = true }: BattleResultCardProps) {
-  const { tr } = useLocale()
+  const { locale, tr } = useLocale()
+  const aiToolName = localizedBattleToolName(battle.ai_tool_id, battle.ai_tool_name, locale)
   const isPending = battle.status === 'pending'
   const mkt = battle.stock_market as 'US' | 'KR'
 
@@ -69,7 +71,7 @@ export default function BattleResultCard({ battle, showLink = true }: BattleResu
             </div>
           </div>
           <div className="px-3">
-            <div className="text-[10px] text-muted font-mono mb-0.5">{battle.ai_tool_name ?? tr('AI 도구', 'AI tool')} {tr('예측', 'prediction')}</div>
+            <div className="text-[10px] text-muted font-mono mb-0.5">{aiToolName} {tr('예측', 'prediction')}</div>
             <div className="text-base font-black font-mono text-[#A78BFA]">
               {formatPercent(aiPct)}
             </div>
@@ -133,7 +135,7 @@ export default function BattleResultCard({ battle, showLink = true }: BattleResu
             </div>
           </div>
           <div>
-            <div className="text-[10px] text-muted font-mono mb-0.5">{battle.ai_tool_name ?? tr('AI 도구', 'AI tool')} {tr('예측', 'prediction')}</div>
+            <div className="text-[10px] text-muted font-mono mb-0.5">{aiToolName} {tr('예측', 'prediction')}</div>
             <div className="text-base font-black font-mono text-[#A78BFA]">
               {formatPercent(aiPct)}
             </div>

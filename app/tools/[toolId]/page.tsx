@@ -7,7 +7,7 @@ import Button from '@vibe/design-system/components/ui/Button'
 import Card from '@vibe/design-system/components/ui/Card'
 import Textarea from '@vibe/design-system/components/ui/Textarea'
 import Badge from '@vibe/design-system/components/ui/Badge'
-import { fetchAITool, toolAvailability } from '@/lib/aiTools'
+import { fetchAITool, localizedTool, toolAvailability } from '@/lib/aiTools'
 import { getSupabase } from '@/lib/supabase'
 import { loadSession } from '@/lib/storage'
 import type { AITool, AIToolReview, UserSession } from '@/lib/types'
@@ -15,7 +15,7 @@ import EmailAuthModal from '@/components/EmailAuthModal'
 import { useLocale } from '@/components/LocaleProvider'
 
 export default function ToolDetailPage() {
-  const { tr } = useLocale()
+  const { locale, tr } = useLocale()
   const params = useParams<{ toolId: string }>()
   const [tool, setTool] = useState<AITool | null>(null)
   const [reviews, setReviews] = useState<AIToolReview[]>([])
@@ -81,6 +81,7 @@ export default function ToolDetailPage() {
   if (error || !tool) return <main className="min-h-screen bg-bg flex items-center justify-center text-danger">{error || tr('도구가 없습니다.', 'Tool not found.')}</main>
 
   const availability = toolAvailability(tool)
+  const copy = localizedTool(tool, locale)
   return (
     <main className="min-h-screen bg-bg">
       {showAuth && <EmailAuthModal onAuth={s => { setSession(s); setShowAuth(false) }} onClose={() => setShowAuth(false)} />}
@@ -93,16 +94,16 @@ export default function ToolDetailPage() {
               <div className="w-14 h-14 rounded-xl border border-border bg-surface-2 flex items-center justify-center text-2xl">🤖</div>
               <div>
                 <div className="flex items-center gap-2 mb-1">
-                  <h1 className="text-2xl font-black text-white">{tool.name}</h1>
+                  <h1 className="text-2xl font-black text-white">{copy.name}</h1>
                   {tool.is_featured && <span className="text-accent">✓</span>}
                 </div>
-                <p className="text-muted">{tool.tagline}</p>
+                <p className="text-muted">{copy.tagline}</p>
               </div>
             </div>
             <Badge variant={availability.battleReady ? 'accent' : 'muted'} dot>{availability.battleReady ? tr('배틀 가능', 'Battle ready') : tr('링크·리뷰 전용', 'Review only')}</Badge>
           </div>
 
-          <p className="text-white/80 leading-7 whitespace-pre-wrap">{tool.description}</p>
+          <p className="text-white/80 leading-7 whitespace-pre-wrap">{copy.description}</p>
 
           <div className="flex flex-wrap gap-2 text-xs text-muted font-mono">
             <span className="px-3 py-1.5 border border-border rounded-full">{tool.pricing === 'free' ? tr('무료', 'Free') : tool.pricing === 'freemium' ? tr('부분 무료', 'Freemium') : tr('유료', 'Paid')}</span>

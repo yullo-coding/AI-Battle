@@ -7,6 +7,7 @@ import type { Battle, AIReasoning } from '@/lib/types'
 import type { AIPrediction } from '@/lib/claude'
 import CountdownTimer from './CountdownTimer'
 import { useLocale } from '@/components/LocaleProvider'
+import { localizedBattleToolName } from '@/lib/aiTools'
 
 interface AIPredictionResultProps {
   battle: Battle
@@ -50,7 +51,8 @@ function ReasoningSection({ title, content }: { title: string; content: string }
 }
 
 export default function AIPredictionResult({ battle, aiPrediction }: AIPredictionResultProps) {
-  const { tr } = useLocale()
+  const { locale, tr } = useLocale()
+  const aiToolName = localizedBattleToolName(battle.ai_tool_id, battle.ai_tool_name, locale)
   const [showReasoning, setShowReasoning] = useState(false)
 
   const userPct = battle.user_change_percent ?? 0
@@ -133,7 +135,7 @@ export default function AIPredictionResult({ battle, aiPrediction }: AIPredictio
           onClick={() => setShowReasoning(p => !p)}
           className="w-full flex items-center justify-between px-5 py-4 text-left hover:bg-white/5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent/60"
         >
-          <span className="font-mono text-sm font-bold text-white">{battle.ai_tool_name ?? tr('AI 도구', 'AI tool')} {tr('상세 분석', 'analysis details')}</span>
+          <span className="font-mono text-sm font-bold text-white">{aiToolName} {tr('상세 분석', 'analysis details')}</span>
           <span className="text-muted text-lg">{showReasoning ? '▲' : '▼'}</span>
         </button>
         <AnimatePresence>

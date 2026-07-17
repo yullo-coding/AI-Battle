@@ -15,7 +15,7 @@ import PercentSlider from '@/components/PercentSlider'
 import AIPredictionResult from '@/components/AIPredictionResult'
 import EmailAuthModal from '@/components/EmailAuthModal'
 import AIToolSelector from '@/components/AIToolSelector'
-import { DEFAULT_AI_TOOL, DEFAULT_TOOL_ID, fetchAITools } from '@/lib/aiTools'
+import { DEFAULT_AI_TOOL, DEFAULT_TOOL_ID, fetchAITools, localizedTool } from '@/lib/aiTools'
 import type { AITool } from '@/lib/types'
 import Button from '@vibe/design-system/components/ui/Button'
 import { useLocale } from '@/components/LocaleProvider'
@@ -42,6 +42,8 @@ export default function NewBattlePage() {
   const [currency, setCurrency] = useState<'KRW' | 'USD'>('KRW')
   const [aiTools, setAiTools] = useState<AITool[]>([])
   const [selectedToolId, setSelectedToolId] = useState(DEFAULT_TOOL_ID)
+  const selectedTool = aiTools.find(tool => tool.id === selectedToolId) ?? DEFAULT_AI_TOOL
+  const selectedToolCopy = localizedTool(selectedTool, locale)
 
   useEffect(() => {
     setSession(loadSession())
@@ -298,7 +300,7 @@ export default function NewBattlePage() {
         {/* STEP 5 — AI 로딩 */}
         {step === 5 && (
           <motion.div key="step5" {...fadeSlide} className="max-w-lg mx-auto px-6 py-8">
-            <AILoadingScreen aiStep={aiStep} toolName={aiTools.find(tool => tool.id === selectedToolId)?.name ?? DEFAULT_AI_TOOL.name} />
+            <AILoadingScreen aiStep={aiStep} toolName={selectedToolCopy.name} />
           </motion.div>
         )}
 

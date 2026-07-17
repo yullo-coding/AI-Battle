@@ -47,6 +47,10 @@ const verifyResponse = await fetch(`https://api.supabase.com/v1/projects/${proje
         select 1 from information_schema.columns
         where table_schema = 'public' and table_name = 'ai_tools' and column_name = 'api_version'
       ) as tool_api_version_column,
+      exists (
+        select 1 from information_schema.columns
+        where table_schema = 'public' and table_name = 'ai_tools' and column_name = 'name_en'
+      ) as tool_english_copy_column,
       to_regclass('public.ai_tool_integrations') is not null as integration_table;`,
     read_only: true,
   }),

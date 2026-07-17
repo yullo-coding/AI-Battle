@@ -32,8 +32,11 @@ export interface AITool {
   id: string
   owner_email: string
   name: string
+  name_en: string | null
   tagline: string
+  tagline_en: string | null
   description: string
+  description_en: string | null
   website_url: string
   logo_url: string | null
   supported_markets: string[]

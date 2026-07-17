@@ -2,12 +2,13 @@ import Link from 'next/link'
 import Card from '@vibe/design-system/components/ui/Card'
 import Badge from '@vibe/design-system/components/ui/Badge'
 import type { AITool } from '@/lib/types'
-import { toolAvailability } from '@/lib/aiTools'
+import { localizedTool, toolAvailability } from '@/lib/aiTools'
 import { useLocale } from '@/components/LocaleProvider'
 
 export default function AIToolCard({ tool }: { tool: AITool }) {
-  const { tr } = useLocale()
+  const { locale, tr } = useLocale()
   const availability = toolAvailability(tool)
+  const copy = localizedTool(tool, locale)
   const availabilityLabel = availability.battleReady ? tr('배틀 가능', 'Battle ready') : tr('링크·리뷰 전용', 'Review only')
   return (
     <Card hover className="h-full flex flex-col gap-4">
@@ -22,10 +23,10 @@ export default function AIToolCard({ tool }: { tool: AITool }) {
 
       <div className="flex-1">
         <div className="flex items-center gap-2 mb-1">
-          <h2 className="font-black text-white text-lg">{tool.name}</h2>
-          {tool.is_featured && <span title="AI Battle 추천">✓</span>}
+          <h2 className="font-black text-white text-lg">{copy.name}</h2>
+          {tool.is_featured && <span title={tr('AI Battle 추천', 'AI Battle pick')}>✓</span>}
         </div>
-        <p className="text-sm text-muted leading-relaxed">{tool.tagline}</p>
+        <p className="text-sm text-muted leading-relaxed">{copy.tagline}</p>
       </div>
 
       <div className="flex flex-wrap gap-2 text-xs font-mono text-muted">
@@ -36,7 +37,7 @@ export default function AIToolCard({ tool }: { tool: AITool }) {
       <div className="pt-3 border-t border-border flex items-center justify-between text-sm">
         <div className="flex gap-4 text-muted">
           <span>♥ {tool.like_count ?? 0}</span>
-          <span>★ {tool.average_rating?.toFixed(1) ?? '새 도구'}</span>
+          <span>★ {tool.average_rating?.toFixed(1) ?? tr('새 도구', 'New')}</span>
           <span>{tr('리뷰', 'Reviews')} {tool.review_count ?? 0}</span>
         </div>
         <Link href={`/tools/${tool.id}`} className="text-accent font-bold hover:text-white transition-colors">

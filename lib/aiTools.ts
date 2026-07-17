@@ -1,5 +1,6 @@
 import { getSupabase } from './supabase'
 import type { AITool, AIToolReview } from './types'
+import type { Locale } from '@/components/LocaleProvider'
 
 export const DEFAULT_TOOL_ID = '00000000-0000-4000-8000-000000000001'
 
@@ -7,8 +8,11 @@ export const DEFAULT_AI_TOOL: AITool = {
   id: DEFAULT_TOOL_ID,
   owner_email: 'system@ai-battle.local',
   name: 'AI Battle 기본 분석기',
+  name_en: 'AI Battle Core Analyzer',
   tagline: '기술적 지표를 조합해 설명 가능한 예측을 만드는 무료 도구',
+  tagline_en: 'A free, explainable predictor built from technical indicators',
   description: 'RSI, MACD, 볼린저 밴드, 이동평균선과 시장 심리를 점수화합니다. 외부 유료 AI 호출 없이 작동하며 각 판단 근거를 공개합니다.',
+  description_en: 'Scores RSI, MACD, Bollinger Bands, moving averages, and market sentiment. It runs without paid external AI calls and explains each signal behind its prediction.',
   website_url: 'https://ai-battle-gamma.vercel.app',
   logo_url: null,
   supported_markets: ['US', 'KR'],
@@ -90,4 +94,17 @@ export function toolAvailability(tool: AITool) {
     return { label: '연동 검증 완료', battleReady: true }
   }
   return { label: '링크·리뷰 전용', battleReady: false }
+}
+
+export function localizedTool(tool: AITool, locale: Locale) {
+  return {
+    name: locale === 'en' && tool.name_en ? tool.name_en : tool.name,
+    tagline: locale === 'en' && tool.tagline_en ? tool.tagline_en : tool.tagline,
+    description: locale === 'en' && tool.description_en ? tool.description_en : tool.description,
+  }
+}
+
+export function localizedBattleToolName(toolId: string | null, storedName: string | null, locale: Locale) {
+  if (toolId === DEFAULT_TOOL_ID) return locale === 'en' ? DEFAULT_AI_TOOL.name_en! : DEFAULT_AI_TOOL.name
+  return storedName || (locale === 'en' ? 'AI tool' : 'AI 도구')
 }

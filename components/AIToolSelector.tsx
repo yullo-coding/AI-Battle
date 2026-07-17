@@ -3,7 +3,7 @@ import Card from '@vibe/design-system/components/ui/Card'
 import Badge from '@vibe/design-system/components/ui/Badge'
 import Button from '@vibe/design-system/components/ui/Button'
 import type { AITool } from '@/lib/types'
-import { toolAvailability } from '@/lib/aiTools'
+import { localizedTool, toolAvailability } from '@/lib/aiTools'
 import { useLocale } from '@/components/LocaleProvider'
 
 export default function AIToolSelector({ tools, value, onChange, onContinue }: {
@@ -12,7 +12,7 @@ export default function AIToolSelector({ tools, value, onChange, onContinue }: {
   onChange: (id: string) => void
   onContinue?: () => void
 }) {
-  const { tr } = useLocale()
+  const { locale, tr } = useLocale()
   return (
     <section className="space-y-6">
       <div className="flex items-end justify-between gap-3">
@@ -27,6 +27,7 @@ export default function AIToolSelector({ tools, value, onChange, onContinue }: {
         {tools.map(tool => {
           const selected = value === tool.id
           const availability = toolAvailability(tool)
+          const copy = localizedTool(tool, locale)
           const pricing = tool.pricing === 'free' ? tr('무료', 'Free') : tool.pricing === 'freemium' ? tr('부분 무료', 'Freemium') : tr('유료', 'Paid')
           const availabilityLabel = availability.battleReady ? tr('바로 배틀 가능', 'Battle ready') : tr('링크·리뷰 전용', 'Review only')
           return (
@@ -44,11 +45,11 @@ export default function AIToolSelector({ tools, value, onChange, onContinue }: {
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex flex-wrap items-center gap-2 mb-1">
-                        <strong className="text-white">{tool.name}</strong>
+                        <strong className="text-white">{copy.name}</strong>
                         <Badge variant={availability.battleReady ? 'accent' : 'muted'}>{availabilityLabel}</Badge>
                         <Badge variant="muted">{pricing}</Badge>
                       </div>
-                      <p className="text-xs text-muted leading-relaxed">{tool.tagline}</p>
+                      <p className="text-xs text-muted leading-relaxed">{copy.tagline}</p>
                       <p className="text-[11px] text-muted mt-3 font-mono">{tool.supported_markets.join(' · ')}</p>
                     </div>
                   </div>
