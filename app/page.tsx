@@ -5,6 +5,7 @@ import { motion } from 'framer-motion'
 import Link from 'next/link'
 import { getSupabase } from '@/lib/supabase'
 import { loadSession, saveSession, clearSession } from '@/lib/storage'
+import { parseBattle } from '@/lib/types'
 import type { Battle, UserSession } from '@/lib/types'
 import HeroSection from '@/components/HeroSection'
 import BattleResultCard from '@/components/BattleResultCard'
@@ -15,27 +16,41 @@ export default function HomePage() {
   const [showAuth, setShowAuth] = useState(false)
   const [battles, setBattles] = useState<Battle[]>([])
   const [loading, setLoading] = useState(false)
+  const [globalStats, setGlobalStats] = useState<{ humanWins: number; aiWins: number } | null>(null)
 
   useEffect(() => {
     const s = loadSession()
     setSession(s)
     if (s) loadRecentBattles(s.email)
+    loadGlobalStats()
   }, [])
 
   async function loadRecentBattles(email: string) {
     setLoading(true)
     const sb = getSupabase()
     if (!sb) { setLoading(false); return }
-
     const { data } = await sb
       .from('battles')
       .select('*')
       .eq('email', email)
       .order('created_at', { ascending: false })
       .limit(3)
-
-    if (data) setBattles(data as Battle[])
+    if (data) setBattles(data.map(r => parseBattle(r as Record<string, unknown>)))
     setLoading(false)
+  }
+
+  async function loadGlobalStats() {
+    const sb = getSupabase()
+    if (!sb) return
+    const { data } = await sb
+      .from('battles')
+      .select('winner')
+      .eq('status', 'resolved')
+    if (!data) return
+    setGlobalStats({
+      humanWins: data.filter(r => r.winner === 'USER').length,
+      aiWins: data.filter(r => r.winner === 'AI').length,
+    })
   }
 
   function handleAuth(s: UserSession) {
@@ -51,58 +66,159 @@ export default function HomePage() {
     setBattles([])
   }
 
+  const resolved = battles.filter(b => b.status === 'resolved')
+  const wins = resolved.filter(b => b.winner === 'USER').length
+  const losses = resolved.filter(b => b.winner === 'AI').length
+
   return (
     <main className="relative min-h-screen bg-bg">
       {showAuth && <EmailAuthModal onAuth={handleAuth} onClose={() => setShowAuth(false)} />}
 
-      <HeroSection session={session} onAuthClick={() => setShowAuth(true)} onLogout={handleLogout} />
+      {/* ── 로그인 전: 풀 랜딩 ── */}
+      {!session && (
+        <>
+          <HeroSection session={null} onAuthClick={() => setShowAuth(true)} onLogout={handleLogout} />
 
-      {/* CTA section */}
-      <section className="max-w-lg mx-auto px-6 py-16 space-y-12">
-
-        {/* How it works */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          className="space-y-3"
-        >
-          <div className="tag text-muted mb-4">// HOW_IT_WORKS</div>
-          {[
-            { step: '01', label: '종목 선택', desc: '삼성전자 · NVIDIA · Alphabet 중 선택' },
-            { step: '02', label: '날짜 선택', desc: '내일~7일 후 중 결과 확인 날짜 선택' },
-            { step: '03', label: '지표 확인', desc: 'RSI · MACD · 볼린저 · 애널리스트 분석' },
-            { step: '04', label: '% 예측', desc: '-15% ~ +15% 슬라이더로 등락률 예측' },
-            { step: '05', label: 'AI 대결', desc: 'Claude Sonnet 4.6이 자체 예측 생성' },
-            { step: '06', label: '승부 판정', desc: '실제 종가에 더 가깝게 맞춘 쪽이 승리!' },
-          ].map((item, i) => (
+          {/* HOW IT WORKS */}
+          <section className="max-w-lg mx-auto px-6 py-16 space-y-10">
             <motion.div
-              key={item.step}
-              initial={{ opacity: 0, x: -20 }}
-              whileInView={{ opacity: 1, x: 0 }}
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
-              transition={{ delay: i * 0.06 }}
-              className="flex items-start gap-4 p-4 bg-surface border border-border rounded-xl"
             >
-              <div className="text-accent font-mono text-xs font-bold w-6 flex-shrink-0 mt-0.5">{item.step}</div>
-              <div>
-                <div className="font-bold text-white text-sm">{item.label}</div>
-                <div className="text-muted text-xs mt-0.5">{item.desc}</div>
+              <div className="text-center mb-8">
+                <div className="text-xs font-mono text-muted mb-2">사용 방법</div>
+                <h2 className="text-2xl font-black text-white">6단계로 AI와 대결</h2>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                {[
+                  { step: '01', icon: '📈', label: '종목 선택', desc: '삼성전자·NVIDIA·Alphabet' },
+                  { step: '02', icon: '📅', label: '날짜 선택', desc: '내일~7일 후 결과 확인일' },
+                  { step: '03', icon: '🔍', label: '지표 분석', desc: 'RSI·MACD·볼린저 대시보드' },
+                  { step: '04', icon: '🎯', label: '등락률 예측', desc: '슬라이더로 % 직접 입력' },
+                  { step: '05', icon: '🤖', label: '도구와 대결', desc: '무료 기본 분석기가 예측 생성' },
+                  { step: '06', icon: '🏆', label: '승부 판정', desc: '더 정확한 예측이 승리!' },
+                ].map((item, i) => (
+                  <motion.div
+                    key={item.step}
+                    initial={{ opacity: 0, y: 16 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ delay: i * 0.07 }}
+                    className="relative p-4 rounded-2xl border bg-surface border-border"
+                  >
+                    <div className="flex items-center justify-between mb-3">
+                      <span className="text-2xl">{item.icon}</span>
+                      <span className="text-xs font-black font-mono text-accent/60">{item.step}</span>
+                    </div>
+                    <div className="font-black text-white text-sm mb-1">{item.label}</div>
+                    <div className="text-muted text-xs leading-relaxed">{item.desc}</div>
+                  </motion.div>
+                ))}
               </div>
             </motion.div>
-          ))}
-        </motion.div>
 
-        {/* Recent battles (if logged in) */}
-        {session && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            className="space-y-4"
+            {/* 전체 인간 vs AI 통계 */}
+            {globalStats && (globalStats.humanWins + globalStats.aiWins) > 0 && (
+              <motion.div
+                initial={{ opacity: 0, y: 16 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                className="border border-border rounded-xl p-5 bg-surface"
+              >
+                <div className="text-xs font-mono text-muted mb-3 text-center">전체 인간 vs AI 전적</div>
+                <div className="flex justify-between text-sm font-mono mb-2">
+                  <span className="text-human font-bold">인간 {globalStats.humanWins}승</span>
+                  <span className="text-[#A78BFA] font-bold">AI {globalStats.aiWins}승</span>
+                </div>
+                <div className="h-2 bg-border rounded-full overflow-hidden flex">
+                  <div
+                    className="bg-human h-full rounded-full transition-all"
+                    style={{ width: `${(globalStats.humanWins / (globalStats.humanWins + globalStats.aiWins)) * 100}%` }}
+                  />
+                  <div className="bg-[#A78BFA] h-full flex-1" />
+                </div>
+              </motion.div>
+            )}
+
+            <div className="text-center">
+              <motion.button
+                onClick={() => setShowAuth(true)}
+                whileTap={{ scale: 0.97 }}
+                className="px-10 py-4 bg-accent text-bg font-bold text-lg rounded-xl btn-pulse hover:bg-accent-dim transition-colors"
+              >
+                ⚔️ 지금 참전하기
+              </motion.button>
+            </div>
+
+            <Link href="/tools" className="block p-5 rounded-2xl border border-border bg-surface hover:border-accent/60 transition-colors group">
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <div className="text-accent text-xs font-mono mb-1">AI 투자 도구 광장</div>
+                  <div className="text-white font-black text-lg mb-1">도구를 올리고, 써보고, 평가하세요</div>
+                  <div className="text-muted text-sm">다른 제작자의 도구를 발견하고 실력으로 검증합니다.</div>
+                </div>
+                <span className="text-2xl text-muted group-hover:text-accent transition-colors">→</span>
+              </div>
+            </Link>
+          </section>
+        </>
+      )}
+
+      {/* ── 로그인 후: 대시보드 ── */}
+      {session && (
+        <section className="max-w-lg mx-auto px-6 py-10 space-y-8">
+
+          {/* 인사 + 통계 */}
+          <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}>
+            <div className="text-muted text-sm font-mono mb-1">안녕하세요,</div>
+            <h1 className="text-2xl font-black text-white mb-4">{session.nickname} <span className="text-accent">님</span></h1>
+
+            {resolved.length > 0 && (
+              <div className="grid grid-cols-3 gap-3 mb-2">
+                <div className="bg-surface border border-border rounded-xl p-3 text-center">
+                  <div className="text-2xl font-black text-up font-mono">{wins}</div>
+                  <div className="text-xs text-muted mt-0.5">승</div>
+                </div>
+                <div className="bg-surface border border-border rounded-xl p-3 text-center">
+                  <div className="text-2xl font-black text-down font-mono">{losses}</div>
+                  <div className="text-xs text-muted mt-0.5">패</div>
+                </div>
+                <div className="bg-surface border border-border rounded-xl p-3 text-center">
+                  <div className="text-2xl font-black text-accent font-mono">
+                    {resolved.length > 0 ? Math.round((wins / resolved.length) * 100) : 0}%
+                  </div>
+                  <div className="text-xs text-muted mt-0.5">승률</div>
+                </div>
+              </div>
+            )}
+          </motion.div>
+
+          {/* 새 배틀 CTA */}
+          <Link
+            href="/battle/new"
+            className="block w-full py-4 bg-accent text-bg font-bold text-center text-lg rounded-xl hover:bg-accent-dim transition-colors btn-pulse"
           >
+            ⚔️ 새 배틀 시작
+          </Link>
+
+          <div className="grid grid-cols-2 gap-3">
+            <Link href="/tools" className="p-4 rounded-xl border border-border bg-surface hover:border-accent/60 transition-colors">
+              <div className="text-xl mb-2">🧰</div>
+              <div className="text-white font-bold text-sm">AI 도구 찾기</div>
+              <div className="text-xs text-muted mt-1">리뷰·평점·배틀</div>
+            </Link>
+            <Link href="/tools/new" className="p-4 rounded-xl border border-border bg-surface hover:border-accent/60 transition-colors">
+              <div className="text-xl mb-2">🚀</div>
+              <div className="text-white font-bold text-sm">내 도구 등록</div>
+              <div className="text-xs text-muted mt-1">링크로 간단히 공개</div>
+            </Link>
+          </div>
+
+          {/* 최근 배틀 */}
+          <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <div className="tag text-accent">// RECENT_BATTLES</div>
+              <span className="text-xs font-mono text-muted">최근 배틀</span>
               <Link href="/my-battles" className="text-xs text-muted font-mono hover:text-accent transition-colors">
                 전체 보기 →
               </Link>
@@ -111,38 +227,23 @@ export default function HomePage() {
             {loading ? (
               <div className="space-y-3">
                 {[1, 2].map(i => (
-                  <div key={i} className="h-32 bg-surface border border-border rounded-xl animate-pulse" />
+                  <div key={i} className="h-28 bg-surface border border-border rounded-xl animate-pulse" />
                 ))}
               </div>
             ) : battles.length > 0 ? (
-              <div className="space-y-4">
-                {battles.map(b => (
-                  <BattleResultCard key={b.id} battle={b} />
-                ))}
-              </div>
+              battles.map(b => <BattleResultCard key={b.id} battle={b} />)
             ) : (
-              <div className="text-center py-8 border border-border rounded-xl text-muted text-sm">
-                아직 참여한 배틀이 없습니다. 첫 배틀을 시작해보세요!
+              <div className="text-center py-10 border border-border rounded-xl text-muted text-sm">
+                아직 배틀 기록이 없습니다.
               </div>
             )}
-          </motion.div>
-        )}
+          </div>
+        </section>
+      )}
 
-        {/* Leaderboard link */}
-        <div className="text-center">
-          <Link
-            href="/leaderboard"
-            className="inline-flex items-center gap-2 px-6 py-3 border border-border text-muted rounded-lg hover:border-accent hover:text-accent transition-colors font-mono text-sm"
-          >
-            🏆 인간 vs AI 전체 전적
-          </Link>
-        </div>
-      </section>
-
-      {/* Footer */}
       <footer className="border-t border-border py-8 text-center text-muted text-xs font-mono">
         <div className="text-accent mb-1">AI_BATTLE v2.0.0</div>
-        <div>Powered by Claude Sonnet 4.6 × Yahoo Finance</div>
+        <div>무료 규칙 기반 분석기 × 공개 시장 데이터</div>
       </footer>
     </main>
   )

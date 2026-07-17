@@ -60,7 +60,6 @@ export default function ProfileModal({ session, onClose, onLogout, onUpdate }: P
       >
         {/* Header */}
         <div className="mb-5">
-          <div className="tag text-accent mb-2">// PROFILE</div>
           <div className="text-white font-bold text-lg">{session.nickname}</div>
         </div>
 

@@ -1,7 +1,5 @@
 'use client'
 
-import { useRef } from 'react'
-import { motion } from 'framer-motion'
 
 interface PercentSliderProps {
   value: number
@@ -17,7 +15,6 @@ function toPct(v: number) {
 }
 
 export default function PercentSlider({ value, onChange }: PercentSliderProps) {
-  const trackRef = useRef<HTMLDivElement>(null)
   const thumbPct = toPct(value) // 0 ~ 100
   const centerPct = toPct(0)   // 50
 
@@ -27,22 +24,7 @@ export default function PercentSlider({ value, onChange }: PercentSliderProps) {
   const isNegative = value < 0
 
   return (
-    <div className="space-y-6">
-      {/* Big value display */}
-      <div className="text-center py-4">
-        <motion.div
-          key={value}
-          initial={{ scale: 0.9, opacity: 0.7 }}
-          animate={{ scale: 1, opacity: 1 }}
-          transition={{ duration: 0.1 }}
-          className={`text-5xl font-black font-mono ${
-            isPositive ? 'text-up' : isNegative ? 'text-down' : 'text-accent'
-          }`}
-        >
-          {value > 0 ? '+' : ''}{value}%
-        </motion.div>
-      </div>
-
+    <div className="space-y-4">
       {/* Slider track */}
       <div className="py-2">
         <div className="relative h-8 flex items-center mx-2">

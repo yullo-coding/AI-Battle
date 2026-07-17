@@ -24,12 +24,12 @@ function PredictionBox({
     up: 'text-up border-up/40 bg-up/5',
     down: 'text-down border-down/40 bg-down/5',
     neutral: 'text-accent border-accent/40 bg-accent/5',
-    ai: 'text-[#7C3AED] border-[#7C3AED]/40 bg-[#7C3AED]/5',
+    ai: 'text-[#A78BFA] border-[#A78BFA]/40 bg-[#A78BFA]/5',
   }
   return (
     <div className={`border rounded-xl p-5 text-center ${colorMap[color]}`}>
       <div className="text-xs font-mono text-muted mb-2">{label}</div>
-      <div className={`text-4xl font-black font-mono ${color === 'ai' ? 'text-[#7C3AED]' : color === 'up' ? 'text-up' : color === 'down' ? 'text-down' : 'text-accent'}`}>
+      <div className={`text-4xl font-black font-mono ${color === 'ai' ? 'text-[#A78BFA]' : color === 'up' ? 'text-up' : color === 'down' ? 'text-down' : 'text-accent'}`}>
         {value}
       </div>
       {badge && (
@@ -42,7 +42,7 @@ function PredictionBox({
 function ReasoningSection({ title, content }: { title: string; content: string }) {
   return (
     <div className="border-b border-border/50 pb-4 last:border-0 last:pb-0">
-      <div className="text-xs font-mono text-[#7C3AED] mb-2">{title}</div>
+      <div className="text-xs font-mono text-[#A78BFA] mb-2">{title}</div>
       <p className="text-sm text-white/80 leading-relaxed">{content}</p>
     </div>
   )
@@ -63,16 +63,15 @@ export default function AIPredictionResult({ battle, aiPrediction }: AIPredictio
 
   return (
     <div className="space-y-6">
-      <div className="tag text-accent">// STEP_6 — AI 예측 공개</div>
 
       {/* Brief */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="bg-[#7C3AED]/10 border border-[#7C3AED]/30 rounded-xl p-4"
+        className="bg-[#A78BFA]/10 border border-[#A78BFA]/30 rounded-xl p-4"
       >
         <div className="flex items-center gap-2 mb-1">
-          <span className="text-[#7C3AED] text-xs font-mono">// CLAUDE_BRIEF</span>
+          <span className="text-[#A78BFA] text-xs font-mono"></span>
         </div>
         <p className="text-white font-bold">{aiPrediction.brief}</p>
       </motion.div>
@@ -85,12 +84,12 @@ export default function AIPredictionResult({ battle, aiPrediction }: AIPredictio
         className="grid grid-cols-2 gap-3"
       >
         <PredictionBox
-          label="// 내 예측"
+          label="내 예측"
           value={`${userPct > 0 ? '+' : ''}${userPct.toFixed(1)}%`}
           color={userColor as 'up' | 'down' | 'neutral'}
         />
         <PredictionBox
-          label="// AI 예측"
+          label="AI 예측"
           value={`${aiPct > 0 ? '+' : ''}${aiPct.toFixed(1)}%`}
           color="ai"
           badge={`신뢰도 ${aiPrediction.confidence}%`}
@@ -106,14 +105,14 @@ export default function AIPredictionResult({ battle, aiPrediction }: AIPredictio
       >
         <div className="flex justify-between text-xs font-mono mb-2">
           <span className="text-muted">AI 신뢰도</span>
-          <span className="text-[#7C3AED] font-bold">{aiPrediction.confidence}%</span>
+          <span className="text-[#A78BFA] font-bold">{aiPrediction.confidence}%</span>
         </div>
         <div className="h-2 bg-border rounded-full overflow-hidden">
           <motion.div
             initial={{ width: 0 }}
             animate={{ width: `${aiPrediction.confidence}%` }}
             transition={{ delay: 0.3, duration: 0.8, ease: 'easeOut' }}
-            className="h-full bg-[#7C3AED] rounded-full"
+            className="h-full bg-[#A78BFA] rounded-full"
           />
         </div>
         <div className="flex justify-between text-xs text-muted mt-1">
@@ -132,7 +131,7 @@ export default function AIPredictionResult({ battle, aiPrediction }: AIPredictio
           onClick={() => setShowReasoning(p => !p)}
           className="w-full flex items-center justify-between px-5 py-4 text-left hover:bg-white/5 transition-colors"
         >
-          <span className="font-mono text-sm font-bold text-white">// Claude 상세 분석</span>
+          <span className="font-mono text-sm font-bold text-white">{battle.ai_tool_name ?? 'AI 도구'} 상세 분석</span>
           <span className="text-muted text-lg">{showReasoning ? '▲' : '▼'}</span>
         </button>
         <AnimatePresence>
@@ -145,10 +144,10 @@ export default function AIPredictionResult({ battle, aiPrediction }: AIPredictio
               className="overflow-hidden"
             >
               <div className="px-5 pb-5 space-y-4 border-t border-border pt-4">
-                <ReasoningSection title="// 기술적 지표" content={reasoning.technical} />
-                <ReasoningSection title="// 시장 심리" content={reasoning.sentiment} />
-                <ReasoningSection title="// 리스크" content={reasoning.risk} />
-                <ReasoningSection title="// 종합 결론" content={reasoning.conclusion} />
+                <ReasoningSection title="기술적 지표" content={reasoning.technical} />
+                <ReasoningSection title="시장 심리" content={reasoning.sentiment} />
+                <ReasoningSection title="리스크" content={reasoning.risk} />
+                <ReasoningSection title="종합 결론" content={reasoning.conclusion} />
               </div>
             </motion.div>
           )}

@@ -105,7 +105,6 @@ export default function LeaderboardPage() {
       <div className="max-w-2xl mx-auto px-6 py-8">
 
         <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}>
-          <div className="tag text-accent mb-2">// LEADERBOARD</div>
           <h1 className="text-3xl font-black text-white mb-1">인간 vs AI</h1>
           <p className="text-muted text-sm mb-6">종료된 배틀의 전체 기록</p>
         </motion.div>
@@ -132,8 +131,8 @@ export default function LeaderboardPage() {
                 <div className="text-4xl font-black text-white">{userWinRate}%</div>
                 <div className="text-muted text-xs font-mono mt-1">{userWinsTotal}승 / {total}전</div>
               </div>
-              <div className="bg-[#7C3AED]/8 border border-[#7C3AED]/30 rounded-2xl p-5 text-center">
-                <div className="text-xs text-[#7C3AED] font-mono mb-1">🤖 AI (Claude)</div>
+              <div className="bg-[#A78BFA]/8 border border-[#A78BFA]/30 rounded-2xl p-5 text-center">
+                <div className="text-xs text-[#A78BFA] font-mono mb-1">🤖 AI 투자 도구</div>
                 <div className="text-4xl font-black text-white">{aiWinRate}%</div>
                 <div className="text-muted text-xs font-mono mt-1">{aiWinsTotal}승 / {total}전</div>
               </div>
@@ -144,11 +143,11 @@ export default function LeaderboardPage() {
               <div className="flex justify-between text-xs font-mono mb-2">
                 <span className="text-up font-bold">인간 {userWinRate}%</span>
                 {tiesTotal > 0 && <span className="text-muted">무 {tiesTotal}</span>}
-                <span className="text-[#7C3AED] font-bold">AI {aiWinRate}%</span>
+                <span className="text-[#A78BFA] font-bold">AI {aiWinRate}%</span>
               </div>
               <div className="h-4 bg-border rounded-full overflow-hidden flex">
                 <motion.div initial={{ width: 0 }} animate={{ width: `${userWinRate}%` }} transition={{ duration: 1, ease: 'easeOut' }} className="bg-up" />
-                <motion.div initial={{ width: 0 }} animate={{ width: `${aiWinRate}%` }} transition={{ duration: 1, ease: 'easeOut', delay: 0.2 }} className="bg-[#7C3AED]" />
+                <motion.div initial={{ width: 0 }} animate={{ width: `${aiWinRate}%` }} transition={{ duration: 1, ease: 'easeOut', delay: 0.2 }} className="bg-[#A78BFA]" />
               </div>
             </div>
 
@@ -220,13 +219,13 @@ export default function LeaderboardPage() {
                       <div className="text-right text-xs font-mono">
                         <span className="text-up font-bold">인간 {s.userWins}</span>
                         <span className="text-muted mx-1">/</span>
-                        <span className="text-[#7C3AED] font-bold">AI {s.aiWins}</span>
+                        <span className="text-[#A78BFA] font-bold">AI {s.aiWins}</span>
                       </div>
                     </div>
                     <div className="h-2 bg-border rounded-full overflow-hidden flex">
                       <div className="bg-up" style={{ width: `${s.total > 0 ? (s.userWins / s.total) * 100 : 0}%` }} />
                       <div className="bg-accent/40" style={{ width: `${s.total > 0 ? (s.ties / s.total) * 100 : 0}%` }} />
-                      <div className="bg-[#7C3AED]" style={{ width: `${s.total > 0 ? (s.aiWins / s.total) * 100 : 0}%` }} />
+                      <div className="bg-[#A78BFA]" style={{ width: `${s.total > 0 ? (s.aiWins / s.total) * 100 : 0}%` }} />
                     </div>
                   </motion.div>
                 ))}
@@ -245,7 +244,7 @@ export default function LeaderboardPage() {
                     className="flex items-center gap-3 bg-surface border border-border rounded-xl px-4 py-3 text-sm"
                   >
                     <div className={`text-xs font-bold font-mono w-14 flex-shrink-0 ${
-                      b.winner === 'USER' ? 'text-up' : b.winner === 'AI' ? 'text-[#7C3AED]' : 'text-muted'
+                      b.winner === 'USER' ? 'text-up' : b.winner === 'AI' ? 'text-[#A78BFA]' : 'text-muted'
                     }`}>
                       {b.winner === 'USER' ? '🧑 승' : b.winner === 'AI' ? '🤖 승' : '🤝 무'}
                     </div>
@@ -257,7 +256,7 @@ export default function LeaderboardPage() {
                       <span className={b.user_change_percent != null && b.user_change_percent >= 0 ? 'text-up' : 'text-down'}>
                         나 {formatPercent(b.user_change_percent ?? 0)}
                       </span>
-                      <span className="text-[#7C3AED]">AI {formatPercent(b.ai_change_percent ?? 0)}</span>
+                      <span className="text-[#A78BFA]">AI {formatPercent(b.ai_change_percent ?? 0)}</span>
                       <span className={b.actual_change_percent != null && b.actual_change_percent >= 0 ? 'text-up' : 'text-down'}>
                         실 {b.actual_change_percent != null ? formatPercent(b.actual_change_percent) : '?'}
                       </span>

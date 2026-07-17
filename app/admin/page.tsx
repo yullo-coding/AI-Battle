@@ -67,7 +67,7 @@ export default function AdminPage() {
         {/* Header */}
         <div className="mb-8 flex items-start justify-between">
           <div>
-            <div className="tag text-danger mb-1">// ADMIN_PANEL</div>
+            <div className="tag text-danger mb-1">배틀 관리</div>
             <h1 className="text-2xl font-bold text-white">배틀 관리</h1>
           </div>
           <Link
@@ -83,7 +83,7 @@ export default function AdminPage() {
           <div className="grid grid-cols-4 gap-3 mb-8">
             <StatCard label="전체" value={battles.length} color="text-white" />
             <StatCard label="인간 승" value={userWins} color="text-up" />
-            <StatCard label="AI 승" value={aiWins} color="text-[#7C3AED]" />
+            <StatCard label="AI 승" value={aiWins} color="text-[#A78BFA]" />
             <StatCard label="무승부" value={ties} color="text-muted" />
           </div>
         )}
@@ -98,7 +98,7 @@ export default function AdminPage() {
         {/* Pending battles */}
         {pending.length > 0 && (
           <div className="mb-8">
-            <div className="tag text-accent mb-4">// PENDING ({pending.length})</div>
+            <div className="tag text-accent mb-4">진행 중 ({pending.length})</div>
             <div className="space-y-2">
               {pending.map(b => (
                 <BattleRow
@@ -114,7 +114,7 @@ export default function AdminPage() {
 
         {/* Resolved battles */}
         <div>
-          <div className="tag text-muted mb-4">// RESOLVED ({resolved.length})</div>
+          <div className="tag text-muted mb-4">완료 ({resolved.length})</div>
           {loading ? (
             <div className="flex justify-center py-8">
               <div className="w-6 h-6 border-2 border-accent border-t-transparent rounded-full animate-spin" />
@@ -162,7 +162,7 @@ function BattleRow({
   const today = new Date().toISOString().split('T')[0]
   const canResolve = b.status === 'pending' && today >= b.end_date
 
-  const winnerColor = b.winner === 'USER' ? 'text-up' : b.winner === 'AI' ? 'text-[#7C3AED]' : 'text-muted'
+  const winnerColor = b.winner === 'USER' ? 'text-up' : b.winner === 'AI' ? 'text-[#A78BFA]' : 'text-muted'
 
   return (
     <motion.div
@@ -183,7 +183,7 @@ function BattleRow({
         <div className="flex items-center gap-3 mt-0.5 text-xs font-mono text-muted flex-wrap">
           <span>시작 {formatPrice(b.start_price, mkt)}</span>
           <span>나 {formatPercent(b.user_change_percent ?? 0)}</span>
-          <span className="text-[#7C3AED]">AI {formatPercent(b.ai_change_percent ?? 0)}</span>
+          <span className="text-[#A78BFA]">AI {formatPercent(b.ai_change_percent ?? 0)}</span>
           {b.actual_change_percent != null && (
             <span className={b.actual_change_percent >= 0 ? 'text-up' : 'text-down'}>
               실제 {formatPercent(b.actual_change_percent)}

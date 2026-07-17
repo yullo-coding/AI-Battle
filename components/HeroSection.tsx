@@ -66,7 +66,6 @@ export default function HeroSection({ session, onAuthClick, onLogout }: HeroSect
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
         >
-          <div className="tag text-accent mb-6">// HUMAN_VS_AI_INVESTMENT_BATTLE</div>
 
           <h1 className="text-4xl md:text-6xl font-black text-white mb-4 leading-tight">
             당신의 직관이<br />

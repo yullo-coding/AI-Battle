@@ -15,6 +15,8 @@ export interface Battle {
   ai_change_percent: number | null
   ai_confidence: number | null
   ai_reasoning: string | null          // JSON 문자열
+  ai_tool_id: string | null
+  ai_tool_name: string | null
 
   end_price: number | null
   actual_change_percent: number | null
@@ -24,6 +26,38 @@ export interface Battle {
 
   status: 'pending' | 'resolved'
   created_at: string
+}
+
+export interface AITool {
+  id: string
+  owner_email: string
+  name: string
+  tagline: string
+  description: string
+  website_url: string
+  logo_url: string | null
+  supported_markets: string[]
+  pricing: 'free' | 'freemium' | 'paid'
+  integration_type: 'built_in' | 'link' | 'api'
+  verification_status: 'pending' | 'verified' | 'rejected'
+  is_published: boolean
+  is_featured: boolean
+  created_at: string
+  updated_at: string
+  like_count?: number
+  review_count?: number
+  average_rating?: number | null
+}
+
+export interface AIToolReview {
+  id: string
+  tool_id: string
+  user_email: string
+  nickname: string
+  rating: number
+  content: string
+  created_at: string
+  updated_at: string
 }
 
 // AI reasoning JSON 파싱 결과
@@ -70,10 +104,13 @@ export interface StockAnalysis {
   analystHoldCount: number | null
   analystSellCount: number | null
 
+  // 환율
+  usdKrwRate: number | null             // e.g. 1380
+
   // 시장 심리
   fearGreedValue: number | null          // 0~100
   fearGreedLabel: string | null          // 'Extreme Fear' 등
-  recentNews: Array<{ headline: string; date: string }>
+  recentNews: Array<{ headline: string; date: string; sentiment?: 'Bullish' | 'Bearish' | 'Neutral' }>
 }
 
 // ─── 세션 ────────────────────────────────────────────────────

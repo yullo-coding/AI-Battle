@@ -48,6 +48,16 @@ export async function fetchMultipleQuotes(symbols: string[]): Promise<StockQuote
     .map(r => r.value)
 }
 
+// ─── USD/KRW 환율 ────────────────────────────────────────────
+async function fetchUsdKrwRate(): Promise<number | null> {
+  try {
+    const q = await yf.quote('USDKRW=X')
+    return (q.regularMarketPrice as number) ?? null
+  } catch {
+    return null
+  }
+}
+
 // ─── Fear & Greed ────────────────────────────────────────────
 async function fetchFearGreed(): Promise<{ value: number; label: string } | null> {
   try {
@@ -86,7 +96,7 @@ function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
 export async function fetchStockAnalysis(symbol: string): Promise<StockAnalysis | null> {
   try {
     // 병렬 fetch — insights는 느릴 수 있으므로 5초 타임아웃
-    const [quote, chartData, summaryData, insightsData, fearGreed] = await Promise.allSettled([
+    const [quote, chartData, summaryData, insightsData, fearGreed, usdKrw] = await Promise.allSettled([
       fetchStockQuote(symbol),
       yf.chart(symbol, {
         period1: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
@@ -98,6 +108,7 @@ export async function fetchStockAnalysis(symbol: string): Promise<StockAnalysis 
       ),
       withTimeout(yf.insights(symbol), 5000),
       fetchFearGreed(),
+      fetchUsdKrwRate(),
     ])
 
     const q = quote.status === 'fulfilled' ? quote.value : null
@@ -147,14 +158,16 @@ export async function fetchStockAnalysis(symbol: string): Promise<StockAnalysis 
     }
 
     // 뉴스 (insights sigDevs)
-    const recentNews: Array<{ headline: string; date: string }> = []
+    const recentNews: Array<{ headline: string; date: string; sentiment?: 'Bullish' | 'Bearish' | 'Neutral' }> = []
     if (insightsData.status === 'fulfilled' && insightsData.value) {
       const sigDevs = (insightsData.value as Record<string, unknown>).sigDevs as Array<Record<string, unknown>> | undefined
       if (Array.isArray(sigDevs)) {
         sigDevs.slice(0, 3).forEach(d => {
+          const s = String(d.sentiment ?? '')
           recentNews.push({
             headline: String(d.headline ?? ''),
             date: d.date ? new Date(d.date as string).toLocaleDateString('ko-KR') : '',
+            sentiment: s === 'Bullish' ? 'Bullish' : s === 'Bearish' ? 'Bearish' : 'Neutral',
           })
         })
       }
@@ -179,6 +192,7 @@ export async function fetchStockAnalysis(symbol: string): Promise<StockAnalysis 
       fearGreedValue: fg?.value ?? null,
       fearGreedLabel: fg?.label ?? null,
       recentNews,
+      usdKrwRate: usdKrw.status === 'fulfilled' ? usdKrw.value : null,
     }
   } catch (err) {
     console.error(`[stocks] analysis ${symbol}:`, err)

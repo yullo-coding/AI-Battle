@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { AnimatePresence } from 'framer-motion'
 import Link from 'next/link'
-import { loadSession, saveSession } from '@/lib/storage'
+import { loadSession } from '@/lib/storage'
 import type { UserSession } from '@/lib/types'
 import ProfileModal from '@/components/ProfileModal'
 import EmailAuthModal from '@/components/EmailAuthModal'
@@ -42,7 +42,10 @@ export default function Header() {
             AI_BATTLE
           </Link>
 
-          <nav className="flex items-center gap-4">
+          <nav className="flex items-center gap-3 sm:gap-4">
+            <Link href="/tools" className="text-xs font-mono text-muted hover:text-white transition-colors">
+              AI 도구
+            </Link>
             <Link href="/leaderboard" className="text-xs font-mono text-muted hover:text-white transition-colors">
               랭킹
             </Link>

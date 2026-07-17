@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import Link from 'next/link'
 import { getSupabase } from '@/lib/supabase'
-import { loadSession, clearSession } from '@/lib/storage'
+import { loadSession } from '@/lib/storage'
 import type { Battle, UserSession } from '@/lib/types'
 import { parseBattle } from '@/lib/types'
 import BattleResultCard from '@/components/BattleResultCard'
@@ -48,12 +48,6 @@ export default function MyBattlesPage() {
     loadBattles(s.email)
   }
 
-  function handleLogout() {
-    clearSession()
-    setSession(null)
-    setBattles([])
-  }
-
   // Stats
   const resolved = battles.filter(b => b.status === 'resolved')
   const wins = resolved.filter(b => b.winner === 'USER').length
@@ -67,7 +61,6 @@ export default function MyBattlesPage() {
 
       <div className="max-w-lg mx-auto px-6 py-8">
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-          <div className="tag text-accent mb-2">// MY_BATTLES</div>
           <h1 className="text-2xl font-black text-white mb-1">내 배틀 전적</h1>
           {session && (
             <p className="text-muted text-sm mb-6">

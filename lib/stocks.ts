@@ -9,6 +9,19 @@ export function formatPrice(price: number, market: 'US' | 'KR'): string {
   return `$${price.toFixed(2)}`
 }
 
+export function formatPriceWithCurrency(
+  price: number,
+  market: 'US' | 'KR',
+  currency: 'KRW' | 'USD',
+  usdKrwRate: number | null
+): string {
+  if (market === 'KR') return `₩${Math.round(price).toLocaleString('ko-KR')}`
+  if (currency === 'KRW' && usdKrwRate) {
+    return `₩${Math.round(price * usdKrwRate).toLocaleString('ko-KR')}`
+  }
+  return `$${price.toFixed(2)}`
+}
+
 export function formatChange(changePercent: number): string {
   const sign = changePercent >= 0 ? '+' : ''
   return `${sign}${changePercent.toFixed(2)}%`

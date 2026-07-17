@@ -34,7 +34,6 @@ export default function ApiSetupModal({ onDone }: ApiSetupModalProps) {
         className="w-full max-w-md bg-surface border border-border rounded-2xl p-8"
       >
         <div className="mb-6">
-          <div className="tag text-accent mb-2">// AI_SETUP</div>
           <h2 className="text-xl font-black text-white mb-1">AI 설정</h2>
           <p className="text-muted text-sm">어떤 방식으로 AI와 배틀할까요? 나중에 설정에서 변경 가능합니다.</p>
         </div>

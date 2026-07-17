@@ -38,7 +38,7 @@ export default function DateSelector({ symbol, onSelect, onBack }: DateSelectorP
 
   return (
     <div className="space-y-6">
-      <div className="tag text-accent mb-2">// STEP_2 — 날짜 선택</div>
+      <div className="tag text-accent mb-2">날짜 선택</div>
       <div className="flex items-center gap-2 mb-6">
         <span>{stock?.market === 'KR' ? '🇰🇷' : '🇺🇸'}</span>
         <span className="text-white font-bold">{stock?.name}</span>

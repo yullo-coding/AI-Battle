@@ -94,7 +94,6 @@ export default function EmailAuthModal({ onAuth, onClose }: EmailAuthModalProps)
           </button>
         )}
         <div className="mb-8">
-          <div className="tag text-accent mb-3">// BATTLE_ACCESS</div>
           <h2 className="text-2xl font-bold text-white mb-2">이메일로 참전하기</h2>
           <p className="text-muted text-sm">
             {modalStep === 'phone'

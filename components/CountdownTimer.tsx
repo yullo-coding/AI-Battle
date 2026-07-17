@@ -5,6 +5,7 @@ import { useState, useEffect } from 'react'
 interface CountdownTimerProps {
   endAt: string
   onEnd?: () => void
+  compact?: boolean
 }
 
 interface TimeLeft {
@@ -27,7 +28,7 @@ function calcTimeLeft(endAt: string): TimeLeft {
   }
 }
 
-export default function CountdownTimer({ endAt, onEnd }: CountdownTimerProps) {
+export default function CountdownTimer({ endAt, onEnd, compact = false }: CountdownTimerProps) {
   const [time, setTime] = useState<TimeLeft>(calcTimeLeft(endAt))
 
   useEffect(() => {
@@ -43,17 +44,28 @@ export default function CountdownTimer({ endAt, onEnd }: CountdownTimerProps) {
   }, [endAt, onEnd])
 
   if (time.total <= 0) {
+    if (compact) return <span className="text-xs text-muted font-mono">결과 대기 중</span>
     return (
       <div className="text-center">
-        <div className="tag text-danger">// BATTLE_ENDED</div>
         <div className="text-2xl font-bold text-white mt-1">결과 집계 중...</div>
+      </div>
+    )
+  }
+
+  if (compact) {
+    const parts = []
+    if (time.days > 0) parts.push(`${time.days}일`)
+    parts.push(`${String(time.hours).padStart(2,'0')}:${String(time.minutes).padStart(2,'0')}:${String(time.seconds).padStart(2,'0')}`)
+    return (
+      <div>
+        <div className="text-[10px] text-muted font-mono mb-0.5">남은 시간</div>
+        <div className="text-sm font-bold font-mono text-accent">{parts.join(' ')}</div>
       </div>
     )
   }
 
   return (
     <div className="text-center">
-      <div className="tag text-muted mb-3">// TIME_REMAINING</div>
       <div className="flex items-center justify-center gap-3">
         {time.days > 0 && (
           <>

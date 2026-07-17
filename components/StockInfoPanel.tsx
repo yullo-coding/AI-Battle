@@ -3,7 +3,7 @@
 import { motion } from 'framer-motion'
 import type { StockAnalysis } from '@/lib/types'
 import { formatPrice } from '@/lib/stocks'
-import { bollingerPosition, rsiLabel, macdSignal } from '@/lib/indicators'
+import { bollingerPosition } from '@/lib/indicators'
 
 interface StockInfoPanelProps {
   analysis: StockAnalysis
@@ -16,7 +16,7 @@ const SIGNAL_LABEL: Record<SignalType, string> = { buy: '매수', sell: '매도'
 const SIGNAL_COLOR: Record<SignalType, string> = {
   buy: 'text-up bg-up/15 border-up/40',
   sell: 'text-down bg-down/15 border-down/40',
-  neutral: 'text-accent bg-accent/10 border-accent/30',
+  neutral: 'text-muted bg-white/8 border-white/20',
 }
 
 function SignalBadge({ signal }: { signal: SignalType }) {
@@ -56,12 +56,12 @@ export default function StockInfoPanel({ analysis, endDate }: StockInfoPanelProp
   const buyCount = signals.filter(s => s === 'buy').length
   const sellCount = signals.filter(s => s === 'sell').length
   const overallSignal: SignalType = buyCount > sellCount ? 'buy' : sellCount > buyCount ? 'sell' : 'neutral'
-  const overallLabel = overallSignal === 'buy' ? '📈 상승 우세' : overallSignal === 'sell' ? '📉 하락 우세' : '↔️ 방향 불분명'
+  const overallLabel = overallSignal === 'buy' ? '▲ 상승 우세' : overallSignal === 'sell' ? '▼ 하락 우세' : '상승·하락 신호 혼재'
   const overallDesc = overallSignal === 'buy'
     ? `${buyCount}개 지표 상승 신호`
     : overallSignal === 'sell'
     ? `${sellCount}개 지표 하락 신호`
-    : '상승·하락 신호 혼재'
+    : `매수 ${buyCount} · 매도 ${sellCount} · 중립 ${signals.length - buyCount - sellCount}`
 
   const analystTotal = (analystBuyCount ?? 0) + (analystHoldCount ?? 0) + (analystSellCount ?? 0)
   const buyPct = analystTotal > 0 ? Math.round(((analystBuyCount ?? 0) / analystTotal) * 100) : 0
@@ -138,12 +138,12 @@ export default function StockInfoPanel({ analysis, endDate }: StockInfoPanelProp
       {/* ── 종합 신호 요약 ── */}
       <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.06 }}>
         <div className={`rounded-2xl border p-4 ${
-          overallSignal === 'buy' ? 'bg-up/8 border-up/30' : overallSignal === 'sell' ? 'bg-down/8 border-down/30' : 'bg-accent/8 border-accent/25'
+          overallSignal === 'buy' ? 'bg-up/8 border-up/30' : overallSignal === 'sell' ? 'bg-down/8 border-down/30' : 'bg-white/5 border-white/15'
         }`}>
           <div className="flex items-center justify-between">
             <div>
-              <div className="text-xs text-muted mb-1">기술적 지표 종합</div>
-              <div className={`text-2xl font-black ${overallSignal === 'buy' ? 'text-up' : overallSignal === 'sell' ? 'text-down' : 'text-accent'}`}>
+              <div className="text-sm font-bold text-muted mb-1">기술적 지표 종합 결과</div>
+              <div className={`text-3xl font-black ${overallSignal === 'buy' ? 'text-up' : overallSignal === 'sell' ? 'text-down' : 'text-white'}`}>
                 {overallLabel}
               </div>
               <div className="text-xs text-muted mt-0.5">{overallDesc}</div>
@@ -151,7 +151,7 @@ export default function StockInfoPanel({ analysis, endDate }: StockInfoPanelProp
             <div className="flex gap-1.5">
               {[...Array(4)].map((_, i) => (
                 <div key={i} className={`w-3 h-8 rounded-full ${
-                  i < buyCount ? 'bg-up' : i < buyCount + (4 - buyCount - sellCount) ? 'bg-accent/40' : 'bg-down'
+                  i < buyCount ? 'bg-up' : i < buyCount + (4 - buyCount - sellCount) ? 'bg-muted/60' : 'bg-down'
                 }`} />
               ))}
             </div>
@@ -324,17 +324,36 @@ export default function StockInfoPanel({ analysis, endDate }: StockInfoPanelProp
           )}
 
           {recentNews.length > 0 ? (
-            <div className="space-y-3">
-              <div className="text-xs text-muted font-bold">최근 주요 뉴스</div>
-              {recentNews.map((n, i) => (
-                <div key={i} className="flex gap-3 p-3 bg-surface-2 rounded-xl">
-                  <div className="text-muted text-xs font-mono mt-0.5 flex-shrink-0">0{i + 1}</div>
-                  <div>
-                    <div className="text-sm text-white/90 leading-snug">{n.headline}</div>
-                    {n.date && <div className="text-xs text-muted mt-1">{n.date}</div>}
+            <div className="space-y-2">
+              <div className="text-xs text-muted font-bold mb-3">최근 주요 뉴스</div>
+              {recentNews.map((n, i) => {
+                const isBull = n.sentiment === 'Bullish'
+                const isBear = n.sentiment === 'Bearish'
+                return (
+                  <div key={i} className={`flex gap-3 p-3.5 rounded-xl border transition-colors ${
+                    isBull ? 'bg-up/5 border-up/20' :
+                    isBear ? 'bg-down/5 border-down/20' :
+                    'bg-surface-2 border-border/50'
+                  }`}>
+                    <div className={`w-1 rounded-full flex-shrink-0 self-stretch min-h-[2rem] ${
+                      isBull ? 'bg-up' : isBear ? 'bg-down' : 'bg-border'
+                    }`} />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        {n.sentiment && n.sentiment !== 'Neutral' && (
+                          <span className={`text-[10px] font-bold font-mono px-1.5 py-0.5 rounded ${
+                            isBull ? 'bg-up/15 text-up' : 'bg-down/15 text-down'
+                          }`}>
+                            {isBull ? '▲ 강세' : '▼ 약세'}
+                          </span>
+                        )}
+                        {n.date && <span className="text-[10px] text-muted font-mono">{n.date}</span>}
+                      </div>
+                      <div className="text-sm text-white/90 leading-snug line-clamp-2">{n.headline}</div>
+                    </div>
                   </div>
-                </div>
-              ))}
+                )
+              })}
             </div>
           ) : (
             <div className="text-muted text-sm text-center py-4">최근 뉴스 없음</div>

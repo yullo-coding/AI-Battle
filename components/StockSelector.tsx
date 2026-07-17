@@ -43,7 +43,7 @@ export default function StockSelector({ onSelect }: StockSelectorProps) {
 
   return (
     <div className="space-y-4">
-      <div className="tag text-accent mb-6">// STEP_1 — 종목 선택</div>
+      <div className="tag text-accent mb-6">종목 선택</div>
       <p className="text-muted text-sm mb-6">AI와 배틀할 종목을 선택하세요.</p>
       <div className="grid grid-cols-1 gap-4">
         {CURATED_STOCKS.map((stock, i) => {

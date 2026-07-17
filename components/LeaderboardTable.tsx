@@ -71,7 +71,6 @@ export default function LeaderboardTable({ rows, humanTotal, aiTotal }: Leaderbo
       {/* Round history */}
       {rows.length > 0 && (
         <div>
-          <div className="tag text-muted mb-4">// BATTLE_HISTORY</div>
           <div className="space-y-3">
             {rows.map((row, i) => (
               <motion.div
@@ -133,8 +132,8 @@ function ScoreCard({
     <div className={`bg-surface border rounded-xl p-6 text-center transition-all ${
       winning ? `border-${color} glow-${color}` : 'border-border'
     }`}>
-      {winning && <div className="tag text-xs mb-2" style={{ color: color === 'human' ? '#0EA5E9' : '#7C3AED' }}>WINNING</div>}
-      <div className="tag mb-2" style={{ color: color === 'human' ? '#0EA5E9' : '#7C3AED' }}>{label}</div>
+      {winning && <div className="tag text-xs mb-2" style={{ color: color === 'human' ? '#0EA5E9' : '#A78BFA' }}>WINNING</div>}
+      <div className="tag mb-2" style={{ color: color === 'human' ? '#0EA5E9' : '#A78BFA' }}>{label}</div>
       <div className="text-4xl font-black font-mono text-white mb-1">{winRate}%</div>
       <div className="text-muted text-sm font-mono">{wins}승 / {total}전</div>
     </div>
