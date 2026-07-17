@@ -20,11 +20,10 @@ const TICKERS = [
 
 interface HeroSectionProps {
   session: UserSession | null
-  onAuthClick: () => void
   onLogout: () => void
 }
 
-export default function HeroSection({ session, onAuthClick, onLogout }: HeroSectionProps) {
+export default function HeroSection({ session, onLogout }: HeroSectionProps) {
   const { tr } = useLocale()
   const [tickerPos, setTickerPos] = useState(0)
   const tickerRef = useRef<NodeJS.Timeout | null>(null)
@@ -115,7 +114,9 @@ export default function HeroSection({ session, onAuthClick, onLogout }: HeroSect
           ) : (
             <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
               <motion.div whileTap={{ scale: 0.97 }}>
-                <Button size="lg" pulse onClick={onAuthClick}>⚔️ {tr('지금 참전하기', 'Join the Battle')}</Button>
+                <Link href="/battle/new">
+                  <Button size="lg" pulse>⚔️ {tr('지금 참전하기', 'Join the Battle')}</Button>
+                </Link>
               </motion.div>
               <Link href="/tools/new"><Button size="lg" variant="secondary">{tr('내 AI 도구 등록', 'Submit My AI Tool')} →</Button></Link>
             </div>

@@ -13,6 +13,7 @@ import StockInfoPanel from '@/components/StockInfoPanel'
 import PredictionComposer from '@/components/PredictionComposer'
 import AIPredictionResult from '@/components/AIPredictionResult'
 import EmailAuthModal from '@/components/EmailAuthModal'
+import AuthEntryGate from '@/components/AuthEntryGate'
 import AIToolSelector from '@/components/AIToolSelector'
 import { DEFAULT_AI_TOOL, DEFAULT_TOOL_ID, fetchAITools, localizedTool } from '@/lib/aiTools'
 import type { AITool } from '@/lib/types'
@@ -32,6 +33,7 @@ export default function NewBattlePage() {
   const [analysisError, setAnalysisError] = useState('')
   const [userPercent, setUserPercent] = useState(0)
   const [session, setSession] = useState<UserSession | null>(null)
+  const [sessionReady, setSessionReady] = useState(false)
   const [showAuth, setShowAuth] = useState(false)
   const [aiStep, setAiStep] = useState(0)
   const [battle, setBattle] = useState<Battle | null>(null)
@@ -47,7 +49,11 @@ export default function NewBattlePage() {
 
   useEffect(() => {
     setSession(loadSession())
-    const handler = () => setSession(loadSession())
+    setSessionReady(true)
+    const handler = () => {
+      setSession(loadSession())
+      setSessionReady(true)
+    }
     window.addEventListener('session-change', handler)
     return () => window.removeEventListener('session-change', handler)
   }, [])
@@ -151,7 +157,23 @@ export default function NewBattlePage() {
   function handleAuth(s: UserSession) {
     setSession(s)
     setShowAuth(false)
-    submitBattle(s.email)
+  }
+
+  if (!sessionReady) {
+    return (
+      <main className="min-h-screen bg-bg flex items-center justify-center">
+        <div className="h-10 w-10 rounded-full border-2 border-accent border-t-transparent animate-spin" />
+      </main>
+    )
+  }
+
+  if (!session) {
+    return (
+      <main className="min-h-screen bg-bg">
+        {showAuth && <EmailAuthModal onAuth={handleAuth} onClose={() => setShowAuth(false)} />}
+        <AuthEntryGate kind="battle" onLogin={() => setShowAuth(true)} />
+      </main>
+    )
   }
 
   return (

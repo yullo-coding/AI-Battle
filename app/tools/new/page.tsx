@@ -9,6 +9,7 @@ import Textarea from '@vibe/design-system/components/ui/Textarea'
 import { loadSession } from '@/lib/storage'
 import type { UserSession } from '@/lib/types'
 import EmailAuthModal from '@/components/EmailAuthModal'
+import AuthEntryGate from '@/components/AuthEntryGate'
 import { useLocale } from '@/components/LocaleProvider'
 
 const MARKET_OPTIONS = ['US', 'KR', 'EU', 'Crypto', 'FX', 'Global'] as const
@@ -92,22 +93,7 @@ export default function NewToolPage() {
     return (
       <main className="min-h-screen bg-bg">
         {showAuth && <EmailAuthModal onAuth={s => { setSession(s); setShowAuth(false) }} onClose={() => setShowAuth(false)} />}
-        <section className="max-w-lg mx-auto px-6 py-16 sm:py-24">
-          <Card className="p-7 sm:p-8 text-center">
-            <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-2xl border border-[#A78BFA]/40 bg-[#A78BFA]/10 text-2xl">AI</div>
-            <p className="text-xs font-mono text-[#C4B5FD] mb-2">{tr('제작자 시작하기', 'Builder sign-in')}</p>
-            <h1 className="text-2xl sm:text-3xl font-black text-white mb-3">{tr('로그인하고 내 도구를 등록하세요', 'Sign in to submit your tool')}</h1>
-            <p className="text-sm text-muted leading-relaxed mb-7">
-              {tr('도구의 제작자 정보와 등록 내역을 로그인 계정에 안전하게 연결합니다.', 'Your signed-in account is securely linked to the tool and its submission record.')}
-            </p>
-            <div className="grid grid-cols-3 gap-2 mb-7 text-xs">
-              <div className="rounded-xl border border-border bg-surface-2 p-3 text-muted"><strong className="block text-white mb-1">01</strong>{tr('도구 등록', 'Submit')}</div>
-              <div className="rounded-xl border border-border bg-surface-2 p-3 text-muted"><strong className="block text-white mb-1">02</strong>{tr('리뷰 받기', 'Reviews')}</div>
-              <div className="rounded-xl border border-border bg-surface-2 p-3 text-muted"><strong className="block text-white mb-1">03</strong>{tr('API 선택 연결', 'Optional API')}</div>
-            </div>
-            <Button size="lg" className="w-full" onClick={() => setShowAuth(true)}>{tr('이메일로 제작자 로그인', 'Builder sign-in with email')} →</Button>
-          </Card>
-        </section>
+        <AuthEntryGate kind="tool" onLogin={() => setShowAuth(true)} />
       </main>
     )
   }
