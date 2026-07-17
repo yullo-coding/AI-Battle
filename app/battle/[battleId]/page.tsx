@@ -12,6 +12,7 @@ import CountdownTimer from '@/components/CountdownTimer'
 import Button from '@vibe/design-system/components/ui/Button'
 import { useLocale } from '@/components/LocaleProvider'
 import { localizedBattleToolName } from '@/lib/aiTools'
+import { canResolveBattle, getBattleSettlementAt, settlementTimeLabel } from '@/lib/marketTime'
 
 type PageState = 'loading' | 'ready-to-resolve' | 'resolving' | 'done' | 'error'
 
@@ -49,9 +50,8 @@ export default function BattleResultPage() {
       return
     }
 
-    // pending: 결과 날짜 지났으면 "결과 보기" 버튼 표시
-    const today = new Date().toISOString().split('T')[0]
-    if (today >= b.end_date) {
+    // pending: 해당 거래소 장 마감 데이터가 나온 뒤에만 결과 보기 허용
+    if (canResolveBattle(b.end_date, b.stock_market)) {
       setPageState('ready-to-resolve')
     } else {
       setPageState('done') // pending + 아직 날짜 전 → BattleResultCard가 카운트다운 표시
@@ -150,7 +150,12 @@ export default function BattleResultPage() {
                 </div>
               </div>
 
-              <div className="text-center text-xs text-muted font-mono">{tr(`결과 확인일 ${battle.end_date} 도달 — 승부를 확인하세요`, `Result date ${battle.end_date} reached — reveal the winner`)}</div>
+              <div className="text-center text-xs text-muted font-mono">
+                {tr(
+                  `${settlementTimeLabel(battle.end_date, battle.stock_market, locale)} 장 마감 데이터 확인 완료`,
+                  `Closing data available from ${settlementTimeLabel(battle.end_date, battle.stock_market, locale)} KST`
+                )}
+              </div>
             </div>
 
             <Button size="lg" pulse className="w-full" onClick={handleReveal}>{tr('결과 보기', 'Reveal Result')} 🔍</Button>
@@ -200,7 +205,7 @@ function BattleDetail({ battle }: { battle: Battle }) {
   const aiToolName = localizedBattleToolName(battle.ai_tool_id, battle.ai_tool_name, locale)
   const mkt = battle.stock_market as 'US' | 'KR'
   const isPending = battle.status === 'pending'
-  const endDatetime = `${battle.end_date}T23:59:59+09:00`
+  const endDatetime = getBattleSettlementAt(battle.end_date, battle.stock_market).toISOString()
 
   const userPct = battle.user_change_percent ?? 0
   const aiPct = battle.ai_change_percent ?? 0
@@ -232,6 +237,9 @@ function BattleDetail({ battle }: { battle: Battle }) {
         <div className="bg-surface border border-border rounded-xl p-5">
           <div className="text-xs font-mono text-muted mb-3">{tr('결과 확인까지', 'Until result date')}</div>
           <CountdownTimer endAt={endDatetime} />
+          <div className="text-[11px] text-muted text-center mt-3">
+            {tr('결과 공개', 'Available')} · {settlementTimeLabel(battle.end_date, battle.stock_market, locale)} KST
+          </div>
         </div>
       ) : (
         <div className={`rounded-xl px-5 py-4 text-center ${winnerColor}`}>

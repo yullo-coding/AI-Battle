@@ -22,7 +22,7 @@ const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
       <input
         ref={ref}
         className={[
-          'w-full px-4 py-3 rounded-lg bg-surface-2 border border-border text-white placeholder-[#333] focus:border-accent focus:ring-0 transition-all',
+          'w-full px-4 py-3 rounded-lg bg-surface-2 border border-border text-white placeholder:text-[#8A8A8A] focus:border-accent focus:ring-0 transition-all',
           mono ? 'font-mono' : '',
           error ? 'border-danger focus:border-danger' : '',
           className,

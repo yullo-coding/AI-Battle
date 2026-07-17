@@ -40,8 +40,8 @@ export default function HeroSection({ session, onAuthClick, onLogout }: HeroSect
   const totalWidth = TICKERS.length * itemWidth
   const offset = ((tickerPos % totalWidth) + totalWidth) % totalWidth
   const stats = [
-    { value: '10', label: tr('한국·미국 인기 종목', 'Popular KR & US stocks') },
-    { value: 'AI', label: tr('제작자 AI와 직접 대결', 'Battle builder-made AI') },
+    { value: 'KR·US', label: tr('종목 검색·분석', 'Stock search & analysis') },
+    { value: 'OPEN', label: tr('제작자 AI 등록', 'Builder tool submissions') },
     { value: '10', label: tr('선택 가능한 거래일', 'Selectable trading days') },
   ]
 
@@ -70,14 +70,18 @@ export default function HeroSection({ session, onAuthClick, onLogout }: HeroSect
           transition={{ duration: 0.6 }}
         >
 
+          <div className="inline-flex items-center rounded-full border border-accent/35 bg-accent/[0.06] px-3 py-1.5 text-xs text-accent mb-5">
+            {tr('투자자와 AI 도구 제작자가 함께 만드는 실전 검증 무대', 'A real-world proving ground for investors and AI builders')}
+          </div>
+
           <h1 className="text-4xl md:text-6xl font-black text-white mb-4 leading-tight">
-            {tr('당신의 직관이', 'Can your instincts')}<br />
-            <span className="gradient-text-battle">{tr('AI를 이길 수 있을까?', 'beat the AI?')}</span>
+            {tr('사람의 판단과 AI 투자 도구,', 'Human judgment and AI investing tools,')}<br />
+            <span className="gradient-text-battle">{tr('실제 주가로 겨룹니다', 'tested against real prices')}</span>
           </h1>
 
           <p className="text-muted text-lg md:text-xl max-w-2xl mx-auto mb-10 leading-relaxed">
-            {tr('사람과 AI 투자 도구의 주가 예측 배틀.', 'A stock prediction battle between people and AI investing tools.')}<br />
-            {tr(<><span className="text-white">실제 주가</span>로 승패를 가립니다.</>, <>Winners are decided by <span className="text-white">real market prices</span>.</>)}
+            {tr('AI 도구를 발견하고, 직접 대결하고, 리뷰하세요.', 'Discover, battle, and review AI investing tools.')}<br />
+            {tr(<><span className="text-white">내가 만든 도구</span>도 등록해 실제 성과로 검증받을 수 있어요.</>, <>Submit <span className="text-white">your own tool</span> and prove it with real results.</>)}
           </p>
 
           {/* Stats */}
@@ -103,12 +107,18 @@ export default function HeroSection({ session, onAuthClick, onLogout }: HeroSect
                 <span>{tr('안녕하세요,', 'Welcome,')} <span className="text-accent">{session.nickname}</span>{tr('님', '')}</span>
                 <Button size="sm" variant="ghost" onClick={onLogout}>{tr('로그아웃', 'Sign out')}</Button>
               </div>
-              <Link href="/battle/new"><Button size="lg" pulse>⚔️ {tr('배틀 시작하기', 'Start Battle')}</Button></Link>
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+                <Link href="/battle/new"><Button size="lg" pulse>⚔️ {tr('배틀 시작하기', 'Start Battle')}</Button></Link>
+                <Link href="/tools/new"><Button size="lg" variant="secondary">{tr('내 AI 도구 등록', 'Submit My AI Tool')} →</Button></Link>
+              </div>
             </div>
           ) : (
-            <motion.div whileTap={{ scale: 0.97 }} className="inline-block">
-              <Button size="lg" pulse onClick={onAuthClick}>⚔️ {tr('지금 참전하기', 'Join the Battle')}</Button>
-            </motion.div>
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+              <motion.div whileTap={{ scale: 0.97 }}>
+                <Button size="lg" pulse onClick={onAuthClick}>⚔️ {tr('지금 참전하기', 'Join the Battle')}</Button>
+              </motion.div>
+              <Link href="/tools/new"><Button size="lg" variant="secondary">{tr('내 AI 도구 등록', 'Submit My AI Tool')} →</Button></Link>
+            </div>
           )}
         </motion.div>
       </div>

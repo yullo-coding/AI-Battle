@@ -6,12 +6,11 @@ import type { StockAnalysis, StockChoice } from '@/lib/types'
 import type { Battle } from '@/lib/types'
 import type { AIPrediction } from '@/lib/claude'
 import { loadSession } from '@/lib/storage'
-import { formatPriceWithCurrency } from '@/lib/stocks'
 import type { UserSession } from '@/lib/types'
 import StockSelector from '@/components/StockSelector'
 import DateSelector from '@/components/DateSelector'
 import StockInfoPanel from '@/components/StockInfoPanel'
-import PercentSlider from '@/components/PercentSlider'
+import PredictionComposer from '@/components/PredictionComposer'
 import AIPredictionResult from '@/components/AIPredictionResult'
 import EmailAuthModal from '@/components/EmailAuthModal'
 import AIToolSelector from '@/components/AIToolSelector'
@@ -39,7 +38,7 @@ export default function NewBattlePage() {
   const [aiPrediction, setAiPrediction] = useState<AIPrediction | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState('')
-  const [predExpanded, setPredExpanded] = useState(false)
+  const [predExpanded, setPredExpanded] = useState(true)
   const [currency, setCurrency] = useState<'KRW' | 'USD'>('KRW')
   const [aiTools, setAiTools] = useState<AITool[]>([])
   const [selectedToolId, setSelectedToolId] = useState(DEFAULT_TOOL_ID)
@@ -66,6 +65,10 @@ export default function NewBattlePage() {
       .catch(() => setAiTools([]))
   }, [])
 
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }, [step])
+
   // Step 2 → 3: 종목 선택 즉시 분석 데이터를 미리 불러온다.
   function handleSelectStock(stock: StockChoice) {
     const s = stock.symbol
@@ -85,6 +88,7 @@ export default function NewBattlePage() {
   function handleSelectDate(date: string) {
     setEndDate(date)
     setStep(4)
+    setPredExpanded(true)
     setAnalysisLoading(true)
     setAnalysisError('')
     fetch(`/api/stocks/${encodeURIComponent(symbol)}`)
@@ -156,7 +160,7 @@ export default function NewBattlePage() {
 
       {/* Step indicator */}
       <div className="border-b border-border bg-surface/50">
-        <div className="max-w-lg mx-auto px-6 py-3 flex justify-end">
+        <div className="max-w-6xl mx-auto px-6 py-3 flex justify-end">
           <StepIndicator step={step} />
         </div>
       </div>
@@ -205,97 +209,70 @@ export default function NewBattlePage() {
                 <ErrorState message={analysisError} onRetry={() => handleSelectDate(endDate)} />
               </div>
             ) : analysis ? (
-              <>
-                {/* 분석 정보 스크롤 영역 */}
-                <div className="max-w-lg mx-auto px-6 py-6 pb-24">
-                  <StockInfoPanel analysis={analysis} endDate={endDate} />
-                </div>
-
-                {/* 예측 입력 — sticky 하단 */}
-                <div className="fixed bottom-0 left-0 right-0 z-30 bg-surface backdrop-blur-md border-t-2 border-accent/60" style={{ boxShadow: '0 -4px 24px rgba(0,255,136,0.12)' }}>
-                  <div className="max-w-lg mx-auto px-5">
-
-                    {/* 접힌 상태 */}
-                    <div
-                      className="flex items-center justify-between py-4 cursor-pointer"
-                      onClick={() => setPredExpanded(v => !v)}
-                    >
-                      <div>
-                        <div className="text-[11px] font-mono text-muted mb-0.5">{tr('내 예측', 'My prediction')}</div>
-                        <div className="flex items-baseline gap-2">
-                          <span className={`font-black font-mono transition-all duration-200 ${predExpanded ? 'text-4xl' : 'text-xl'} ${
-                            userPercent > 0 ? 'text-up' : userPercent < 0 ? 'text-down' : 'text-white'
-                          }`}>
-                            {userPercent > 0 ? '+' : ''}{userPercent.toFixed(1)}%
-                          </span>
-                          {analysis && (
-                            <span className={`font-mono text-muted transition-all duration-200 ${predExpanded ? 'text-lg' : 'text-sm'}`}>
-                              {formatPriceWithCurrency(
-                                analysis.quote.price * (1 + userPercent / 100),
-                                analysis.quote.market,
-                                currency,
-                                analysis.usdKrwRate
-                              )}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        {analysis?.quote.market === 'US' && (
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="secondary"
-                            onClick={e => { e.stopPropagation(); setCurrency(c => c === 'KRW' ? 'USD' : 'KRW') }}
-                            className="min-h-8 px-2 text-[10px] font-mono"
-                          >
-                            {currency === 'KRW' ? '₩→$' : '$→₩'}
-                          </Button>
-                        )}
-                        <span className="text-muted text-xs font-mono">
-                          {predExpanded ? '▼' : '▲'}
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* 펼친 상태 */}
-                    <AnimatePresence>
-                      {predExpanded && (
-                        <motion.div
-                          initial={{ height: 0, opacity: 0 }}
-                          animate={{ height: 'auto', opacity: 1 }}
-                          exit={{ height: 0, opacity: 0 }}
-                          transition={{ duration: 0.2 }}
-                          className="overflow-hidden"
-                        >
-                          <div className="pb-5 space-y-4">
-                            <PercentSlider value={userPercent} onChange={setUserPercent} />
-                            {submitError && (
-                              <p className="text-xs text-down font-mono">{submitError}</p>
-                            )}
-                            <div className="flex gap-2">
-                              <Button type="button" variant="secondary" onClick={() => setStep(3)}>
-                                ← {tr('날짜', 'Date')}
-                              </Button>
-                              <Button
-                                type="button"
-                                onClick={handleSubmitPrediction}
-                                disabled={submitting}
-                                className="flex-1"
-                              >
-                                {submitting ? tr('제출 중...', 'Submitting...') : tr('AI와 배틀 시작 ⚔️', 'Start AI Battle ⚔️')}
-                              </Button>
-                            </div>
-                            {!session && (
-                              <p className="text-[11px] text-muted text-center">{tr('제출 시 이메일 인증이 필요합니다.', 'Email sign-in is required to submit.')}</p>
-                            )}
-                          </div>
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
+              <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
+                <div className="mb-6">
+                  <div className="text-xs font-mono text-accent mb-2">{tr('분석 확인 · 예측 입력', 'Review analysis · Enter prediction')}</div>
+                  <h1 className="text-2xl sm:text-3xl font-black text-white">{tr('근거를 확인하고 내 예측을 정하세요', 'Review the evidence and make your call')}</h1>
+                  <p className="text-sm text-muted mt-2 leading-relaxed">
+                    {tr('핵심 신호를 먼저 보고 예측을 입력한 뒤, 아래 상세 지표로 판단을 보완하세요.', 'Start with the key signals, enter your prediction, then use the detailed evidence below to refine it.')}
+                  </p>
+                  <div className="flex flex-wrap gap-2 mt-4 text-xs">
+                    <span className="rounded-full border border-border bg-surface px-3 py-1.5 text-muted">
+                      {tr('상대 AI', 'AI opponent')} <strong className="text-[#C4B5FD] ml-1">{selectedToolCopy.name}</strong>
+                    </span>
+                    <span className="rounded-full border border-border bg-surface px-3 py-1.5 text-muted">
+                      {tr('판정일', 'Settlement')} <strong className="text-white font-mono ml-1">{endDate}</strong>
+                    </span>
                   </div>
                 </div>
-              </>
+
+                <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_400px]">
+                  <StockInfoPanel
+                    analysis={analysis}
+                    endDate={endDate}
+                    predictionSlot={(
+                      <div className="lg:hidden">
+                        <PredictionComposer
+                          analysis={analysis}
+                          endDate={endDate}
+                          toolName={selectedToolCopy.name}
+                          value={userPercent}
+                          onChange={setUserPercent}
+                          currency={currency}
+                          onCurrencyChange={setCurrency}
+                          expanded={predExpanded}
+                          onToggle={() => setPredExpanded(v => !v)}
+                          submitting={submitting}
+                          submitError={submitError}
+                          signedIn={Boolean(session)}
+                          onBack={() => setStep(3)}
+                          onSubmit={handleSubmitPrediction}
+                        />
+                      </div>
+                    )}
+                  />
+
+                  <aside className="hidden lg:block lg:sticky lg:top-24">
+                    <PredictionComposer
+                      analysis={analysis}
+                      endDate={endDate}
+                      toolName={selectedToolCopy.name}
+                      value={userPercent}
+                      onChange={setUserPercent}
+                      currency={currency}
+                      onCurrencyChange={setCurrency}
+                      expanded
+                      onToggle={() => undefined}
+                      alwaysExpanded
+                      submitting={submitting}
+                      submitError={submitError}
+                      signedIn={Boolean(session)}
+                      onBack={() => setStep(3)}
+                      onSubmit={handleSubmitPrediction}
+                    />
+                  </aside>
+                </div>
+              </div>
             ) : null}
           </motion.div>
         )}
@@ -329,16 +306,28 @@ const fadeSlide = {
 }
 
 function StepIndicator({ step }: { step: Step }) {
+  const { tr } = useLocale()
+  const labels = [
+    tr('AI 선택', 'Choose AI'),
+    tr('종목 선택', 'Choose stock'),
+    tr('날짜 선택', 'Choose date'),
+    tr('분석·예측', 'Analyze & predict'),
+    tr('AI 분석', 'AI analysis'),
+    tr('완료', 'Done'),
+  ]
   return (
-    <div className="flex items-center gap-1.5">
-      {([1, 2, 3, 4, 5, 6] as Step[]).map(s => (
-        <div
-          key={s}
-          className={`h-1.5 rounded-full transition-all duration-300 ${
-            s < step ? 'w-3 bg-accent' : s === step ? 'w-5 bg-accent' : 'w-3 bg-border'
-          }`}
-        />
-      ))}
+    <div className="flex items-center gap-3">
+      <span className="text-xs text-muted"><strong className="text-white font-mono">{step}/6</strong> · {labels[step - 1]}</span>
+      <div className="flex items-center gap-1.5">
+        {([1, 2, 3, 4, 5, 6] as Step[]).map(s => (
+          <div
+            key={s}
+            className={`h-1.5 rounded-full transition-all duration-300 ${
+              s < step ? 'w-3 bg-accent' : s === step ? 'w-5 bg-accent' : 'w-3 bg-border'
+            }`}
+          />
+        ))}
+      </div>
     </div>
   )
 }

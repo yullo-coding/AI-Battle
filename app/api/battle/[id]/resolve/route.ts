@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { fetchClosingPriceForDate } from '@/lib/stocks.server'
 import { getSupabaseServer } from '@/lib/supabase'
 import type { Battle } from '@/lib/types'
+import { canResolveBattle } from '@/lib/marketTime'
 
 export async function POST(
   _req: NextRequest,
@@ -26,10 +27,9 @@ export async function POST(
       return NextResponse.json({ already: true, battle: b })
     }
 
-    // end_date 도달 여부 확인
-    const today = new Date().toISOString().split('T')[0]
-    if (today < b.end_date) {
-      return NextResponse.json({ error: '아직 결과 날짜가 되지 않았습니다' }, { status: 400 })
+    // 거래소 장 마감 데이터가 공개된 뒤에만 판정한다.
+    if (!canResolveBattle(b.end_date, b.stock_market)) {
+      return NextResponse.json({ error: '아직 장 마감 전입니다' }, { status: 400 })
     }
 
     // 해당 날짜 종가 조회

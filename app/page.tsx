@@ -82,8 +82,68 @@ export default function HomePage() {
         <>
           <HeroSection session={null} onAuthClick={() => setShowAuth(true)} onLogout={handleLogout} />
 
+          {/* 두 가지 참여 경로 */}
+          <section className="max-w-5xl mx-auto px-6 pt-20">
+            <div className="text-center mb-8">
+              <div className="text-xs font-mono text-accent mb-2">{tr('함께 만드는 AI 투자 도구 광장', 'A community-built AI investing hub')}</div>
+              <h2 className="text-2xl sm:text-3xl font-black text-white">{tr('투자자도, 도구 제작자도 참여할 수 있어요', 'Join as an investor or a tool builder')}</h2>
+              <p className="text-sm text-muted mt-3 max-w-2xl mx-auto leading-relaxed">
+                {tr('투자자는 여러 AI를 직접 비교하고, 제작자는 리뷰와 실제 배틀 성과로 도구를 검증받습니다.', 'Investors compare AIs directly. Builders earn reviews and prove their tools through real battle results.')}
+              </p>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <motion.div
+                initial={{ opacity: 0, y: 16 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                className="rounded-2xl border border-human/35 bg-human/[0.05] p-6"
+              >
+                <div className="inline-flex rounded-full border border-human/30 bg-human/10 px-3 py-1 text-xs font-bold text-human mb-5">
+                  {tr('투자자', 'For investors')}
+                </div>
+                <h3 className="text-xl font-black text-white mb-2">{tr('나와 AI, 누가 더 정확할까요?', 'Can you beat the AI?')}</h3>
+                <p className="text-sm text-muted leading-relaxed mb-5">
+                  {tr('원하는 AI 도구와 종목을 고르고 같은 조건에서 예측 정확도를 겨뤄보세요.', 'Choose an AI tool and stock, then compete under the exact same conditions.')}
+                </p>
+                <ul className="space-y-2 text-sm text-white/85 mb-6">
+                  <li className="flex gap-2"><span className="text-human">01</span>{tr('한국·미국 종목 검색과 핵심 지표 확인', 'Search KR & US stocks and review key signals')}</li>
+                  <li className="flex gap-2"><span className="text-human">02</span>{tr('사람과 AI의 예측 오차를 실제 종가로 비교', 'Compare human and AI errors against the real close')}</li>
+                  <li className="flex gap-2"><span className="text-human">03</span>{tr('사용한 도구에 좋아요와 리뷰 남기기', 'Like and review the tool you used')}</li>
+                </ul>
+                <Button size="lg" variant="human" className="w-full" onClick={() => setShowAuth(true)}>
+                  {tr('AI와 배틀 시작', 'Start an AI Battle')} →
+                </Button>
+              </motion.div>
+
+              <motion.div
+                initial={{ opacity: 0, y: 16 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: 0.08 }}
+                className="rounded-2xl border border-[#A78BFA]/40 bg-[#A78BFA]/[0.06] p-6"
+              >
+                <div className="inline-flex rounded-full border border-[#A78BFA]/35 bg-[#A78BFA]/10 px-3 py-1 text-xs font-bold text-[#C4B5FD] mb-5">
+                  {tr('AI 도구 제작자', 'For AI builders')}
+                </div>
+                <h3 className="text-xl font-black text-white mb-2">{tr('만든 도구를 실제 시장에서 증명하세요', 'Prove your tool in the real market')}</h3>
+                <p className="text-sm text-muted leading-relaxed mb-5">
+                  {tr('링크만으로 먼저 소개하고, 예측 API를 연결하면 유저가 서비스 안에서 바로 배틀할 수 있어요.', 'List it with a link, then connect a prediction API so users can battle it without leaving the site.')}
+                </p>
+                <ul className="space-y-2 text-sm text-white/85 mb-6">
+                  <li className="flex gap-2"><span className="text-[#C4B5FD]">01</span>{tr('도구 소개 페이지와 제작자 프로필 공개', 'Publish a tool page and builder profile')}</li>
+                  <li className="flex gap-2"><span className="text-[#C4B5FD]">02</span>{tr('좋아요·리뷰로 실제 사용자 피드백 수집', 'Collect real feedback through likes and reviews')}</li>
+                  <li className="flex gap-2"><span className="text-[#C4B5FD]">03</span>{tr('승률과 평균 오차를 성과 데이터로 축적', 'Build a track record with win rate and average error')}</li>
+                </ul>
+                <Link href="/tools/new" className="block">
+                  <Button size="lg" variant="ai" className="w-full">{tr('내 AI 도구 등록', 'Submit My AI Tool')} →</Button>
+                </Link>
+              </motion.div>
+            </div>
+          </section>
+
           {/* HOW IT WORKS */}
-          <section className="max-w-lg mx-auto px-6 py-16 space-y-10">
+          <section className="max-w-5xl mx-auto px-6 py-20 space-y-10">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
@@ -93,10 +153,10 @@ export default function HomePage() {
                 <div className="text-xs font-mono text-muted mb-2">{tr('사용 방법', 'How it works')}</div>
                 <h2 className="text-2xl font-black text-white">{tr('6단계로 AI와 대결', 'Battle an AI in 6 steps')}</h2>
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                 {[
                   { step: '01', icon: '🤖', label: tr('AI 서비스 선택', 'Choose AI service'), desc: tr('대결할 투자 분석 도구 선택', 'Choose an investing tool') },
-                  { step: '02', icon: '📈', label: tr('종목 선택', 'Choose stock'), desc: tr('한국·미국 인기 종목 10개', '10 popular KR & US stocks') },
+                  { step: '02', icon: '📈', label: tr('종목 선택', 'Choose stock'), desc: tr('한국·미국 종목 검색과 선택', 'Search and choose KR & US stocks') },
                   { step: '03', icon: '📅', label: tr('결과일 선택', 'Choose result date'), desc: tr('다음 10거래일 중 선택', 'Pick from the next 10 trading days') },
                   { step: '04', icon: '🔍', label: tr('지표 분석', 'Review analysis'), desc: tr('RSI·MACD·볼린저 대시보드', 'RSI, MACD & Bollinger dashboard') },
                   { step: '05', icon: '🎯', label: tr('등락률 예측', 'Enter prediction'), desc: tr('%와 예상 금액을 직접 입력', 'Enter a percent and target price') },
@@ -144,22 +204,6 @@ export default function HomePage() {
               </motion.div>
             )}
 
-            <div className="text-center">
-              <motion.div whileTap={{ scale: 0.97 }} className="inline-block">
-                <Button size="lg" pulse onClick={() => setShowAuth(true)}>⚔️ {tr('지금 참전하기', 'Join the Battle')}</Button>
-              </motion.div>
-            </div>
-
-            <Link href="/tools" className="block p-5 rounded-2xl border border-border bg-surface hover:border-accent/60 transition-colors group">
-              <div className="flex items-center justify-between gap-4">
-                <div>
-                  <div className="text-accent text-xs font-mono mb-1">{tr('AI 투자 도구 광장', 'AI Investing Tool Hub')}</div>
-                  <div className="text-white font-black text-lg mb-1">{tr('도구를 올리고, 써보고, 평가하세요', 'Submit, use, and review tools')}</div>
-                  <div className="text-muted text-sm">{tr('다른 제작자의 도구를 발견하고 실력으로 검증합니다.', 'Discover builder-made tools and test them in battle.')}</div>
-                </div>
-                <span className="text-2xl text-muted group-hover:text-accent transition-colors">→</span>
-              </div>
-            </Link>
           </section>
         </>
       )}

@@ -1,6 +1,7 @@
 'use client'
 
 import { motion } from 'framer-motion'
+import type { ReactNode } from 'react'
 import type { StockAnalysis } from '@/lib/types'
 import { formatPrice } from '@/lib/stocks'
 import { bollingerPosition } from '@/lib/indicators'
@@ -9,6 +10,7 @@ import { useLocale } from '@/components/LocaleProvider'
 interface StockInfoPanelProps {
   analysis: StockAnalysis
   endDate: string
+  predictionSlot?: ReactNode
 }
 
 type SignalType = 'buy' | 'sell' | 'neutral'
@@ -16,7 +18,7 @@ type SignalType = 'buy' | 'sell' | 'neutral'
 const SIGNAL_COLOR: Record<SignalType, string> = {
   buy: 'text-up bg-up/15 border-up/40',
   sell: 'text-down bg-down/15 border-down/40',
-  neutral: 'text-muted bg-white/8 border-white/20',
+  neutral: 'text-white/80 bg-white/10 border-white/35',
 }
 
 function SignalBadge({ signal }: { signal: SignalType }) {
@@ -30,10 +32,10 @@ function SignalBadge({ signal }: { signal: SignalType }) {
 }
 
 function SectionTitle({ children }: { children: React.ReactNode }) {
-  return <div className="text-sm font-bold text-white/60 mb-3">{children}</div>
+  return <div className="text-base font-black text-white mb-4">{children}</div>
 }
 
-export default function StockInfoPanel({ analysis, endDate }: StockInfoPanelProps) {
+export default function StockInfoPanel({ analysis, endDate, predictionSlot }: StockInfoPanelProps) {
   const { locale, tr } = useLocale()
   const { quote, rsi14, macd, bollinger, ma20, ma50,
     analystTargetPrice, analystCount,
@@ -145,32 +147,51 @@ export default function StockInfoPanel({ analysis, endDate }: StockInfoPanelProp
 
       {/* ── 종합 신호 요약 ── */}
       <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.06 }}>
-        <div className={`rounded-2xl border p-4 ${
-          overallSignal === 'buy' ? 'bg-up/8 border-up/30' : overallSignal === 'sell' ? 'bg-down/8 border-down/30' : 'bg-white/5 border-white/15'
+        <div className={`rounded-2xl border p-5 ${
+          overallSignal === 'buy' ? 'bg-up/8 border-up/35' : overallSignal === 'sell' ? 'bg-down/8 border-down/35' : 'bg-white/5 border-white/30'
         }`}>
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="text-sm font-bold text-muted mb-1">{tr('기술적 지표 종합 결과', 'Technical Indicator Summary')}</div>
-              <div className={`text-3xl font-black ${overallSignal === 'buy' ? 'text-up' : overallSignal === 'sell' ? 'text-down' : 'text-white'}`}>
+          <div>
+            <div className="text-base font-black text-white mb-2">{tr('기술적 지표 종합 결과', 'Technical Indicator Summary')}</div>
+            <div className={`text-2xl sm:text-3xl font-black leading-tight ${overallSignal === 'buy' ? 'text-up' : overallSignal === 'sell' ? 'text-down' : 'text-white'}`}>
                 {overallLabel}
+            </div>
+            <div className="text-sm text-muted mt-1">{overallDesc}</div>
+
+            <div className="grid grid-cols-3 gap-2 mt-5">
+              <div className="rounded-lg border border-up/30 bg-up/5 px-3 py-2">
+                <div className="text-[10px] text-up font-bold">{tr('상승 신호', 'Bullish')}</div>
+                <div className="text-xl text-up font-black font-mono">{buyCount}</div>
               </div>
-              <div className="text-xs text-muted mt-0.5">{overallDesc}</div>
+              <div className="rounded-lg border border-white/30 bg-white/[0.06] px-3 py-2">
+                <div className="text-[10px] text-white/70 font-bold">{tr('중립 신호', 'Neutral')}</div>
+                <div className="text-xl text-white/80 font-black font-mono">{signals.length - buyCount - sellCount}</div>
+              </div>
+              <div className="rounded-lg border border-down/30 bg-down/5 px-3 py-2">
+                <div className="text-[10px] text-down font-bold">{tr('하락 신호', 'Bearish')}</div>
+                <div className="text-xl text-down font-black font-mono">{sellCount}</div>
+              </div>
             </div>
-            <div className="flex gap-1.5">
-              {[...Array(4)].map((_, i) => (
-                <div key={i} className={`w-3 h-8 rounded-full ${
-                  i < buyCount ? 'bg-up' : i < buyCount + (4 - buyCount - sellCount) ? 'bg-muted/60' : 'bg-down'
-                }`} />
-              ))}
+
+            <div className="flex h-2.5 overflow-hidden rounded-full mt-3 bg-border">
+              {buyCount > 0 && <div className="bg-up" style={{ width: `${(buyCount / signals.length) * 100}%` }} />}
+              {signals.length - buyCount - sellCount > 0 && <div className="bg-white/45" style={{ width: `${((signals.length - buyCount - sellCount) / signals.length) * 100}%` }} />}
+              {sellCount > 0 && <div className="bg-down" style={{ width: `${(sellCount / signals.length) * 100}%` }} />}
             </div>
+            {predictionSlot && (
+              <div className="lg:hidden mt-4 pt-4 border-t border-white/15 text-sm font-bold text-accent">
+                {tr('아래에서 내 예측을 바로 입력하세요', 'Enter your prediction just below')} ↓
+              </div>
+            )}
           </div>
         </div>
       </motion.div>
 
+      {predictionSlot}
+
       {/* ── 기술적 지표 ── */}
       <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
         <div className="bg-surface border border-border rounded-2xl p-5">
-          <SectionTitle>📊 {tr('기술적 지표', 'Technical indicators')}</SectionTitle>
+          <SectionTitle>{tr('기술적 지표 상세', 'Technical indicator details')}</SectionTitle>
           <div className="space-y-4">
 
             {/* RSI 게이지 */}
@@ -256,7 +277,7 @@ export default function StockInfoPanel({ analysis, endDate }: StockInfoPanelProp
       {(analystTargetPrice || analystTotal > 0) && (
         <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.14 }}>
           <div className="bg-surface border border-border rounded-2xl p-5">
-            <SectionTitle>🎯 {tr('전문가 분석', 'Analyst outlook')}</SectionTitle>
+            <SectionTitle>{tr('전문가 분석', 'Analyst outlook')}</SectionTitle>
 
             {analystTargetPrice && upside && (
               <div className={`rounded-xl p-4 mb-4 ${Number(upside) > 0 ? 'bg-up/8 border border-up/25' : 'bg-down/8 border border-down/25'}`}>
@@ -297,7 +318,7 @@ export default function StockInfoPanel({ analysis, endDate }: StockInfoPanelProp
       {/* ── 시장 심리 ── */}
       <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.18 }}>
         <div className="bg-surface border border-border rounded-2xl p-5">
-          <SectionTitle>🧠 {tr('시장 심리', 'Market sentiment')}</SectionTitle>
+          <SectionTitle>{tr('시장 심리와 주요 뉴스', 'Market sentiment and key news')}</SectionTitle>
 
           {fearGreedValue != null && (
             <div className="flex items-center gap-5 mb-5 pb-5 border-b border-border/50">
