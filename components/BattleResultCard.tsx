@@ -44,7 +44,9 @@ export default function BattleResultCard({ battle, showLink = true }: BattleResu
   if (!isPending) {
     const winner = battle.winner
     const actualPct = battle.actual_change_percent ?? 0
-    const accuracyGap = Math.abs((battle.user_error ?? 0) - (battle.ai_error ?? 0))
+    const roundedUserError = Number((battle.user_error ?? 0).toFixed(1))
+    const roundedAiError = Number((battle.ai_error ?? 0).toFixed(1))
+    const accuracyGap = Math.abs(roundedUserError - roundedAiError)
     const winnerLabel = winner === 'USER'
       ? tr('🏆 인간 승리', '🏆 Human wins')
       : winner === 'AI'
