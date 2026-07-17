@@ -1,9 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { fetchStockAnalysis } from '@/lib/stocks.server'
-import { generateAIPrediction } from '@/lib/claude'
+import { generateAIPrediction, type AIPrediction } from '@/lib/claude'
 import { getSupabaseServer } from '@/lib/supabase'
 import { CURATED_STOCKS } from '@/lib/stocks'
 import { DEFAULT_TOOL_ID } from '@/lib/aiTools'
+import { getSupabaseAdmin } from '@/lib/supabase-admin.server'
+import { callExternalTool } from '@/lib/external-ai-tool.server'
+
+export const runtime = 'nodejs'
+export const maxDuration = 30
 
 export async function POST(req: NextRequest) {
   try {
@@ -24,21 +29,69 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: '지원하지 않는 종목' }, { status: 400 })
     }
 
-    // MVP에서는 서버가 직접 소유한 무료 기본 분석기만 자동 실행한다.
-    // 임의 외부 URL 호출은 SSRF 위험 때문에 운영 검증 API가 준비될 때까지 금지한다.
     const selectedToolId = aiToolId ?? DEFAULT_TOOL_ID
-    if (selectedToolId !== DEFAULT_TOOL_ID) {
-      return NextResponse.json({ error: '아직 자동 배틀이 검증되지 않은 도구입니다.' }, { status: 400 })
-    }
 
-    // 종합 분석 데이터 fetch
     const analysis = await fetchStockAnalysis(symbol)
     if (!analysis) {
       return NextResponse.json({ error: '주가 데이터 조회 실패' }, { status: 500 })
     }
 
-    // 외부 AI 비용이 없는 자체 규칙 기반 예측
-    const aiPrediction = await generateAIPrediction(analysis)
+    let selectedToolName = 'AI Battle 기본 분석기'
+    let aiPrediction: AIPrediction
+
+    if (selectedToolId === DEFAULT_TOOL_ID) {
+      // 외부 AI 비용이 없는 자체 규칙 기반 예측
+      aiPrediction = await generateAIPrediction(analysis)
+    } else {
+      const admin = getSupabaseAdmin()
+      const [{ data: tool }, { data: integration }] = await Promise.all([
+        admin.from('ai_tools')
+          .select('id,name,integration_type,verification_status')
+          .eq('id', selectedToolId)
+          .eq('integration_type', 'api')
+          .eq('verification_status', 'verified')
+          .maybeSingle(),
+        admin.from('ai_tool_integrations')
+          .select('endpoint_url,auth_token,status')
+          .eq('tool_id', selectedToolId)
+          .eq('status', 'verified')
+          .maybeSingle(),
+      ])
+
+      if (!tool || !integration) {
+        return NextResponse.json({ error: '배틀 연결이 검증되지 않은 AI 도구입니다.' }, { status: 400 })
+      }
+
+      selectedToolName = tool.name
+      try {
+        aiPrediction = await callExternalTool({
+          endpointUrl: integration.endpoint_url,
+          authToken: integration.auth_token,
+        }, {
+          symbol,
+          stockName: stock.name,
+          market: stock.market,
+          endDate,
+          analysis,
+        })
+        const currentUsage = await admin.from('ai_tool_integrations').select('call_count').eq('tool_id', selectedToolId).single()
+        await admin.from('ai_tool_integrations').update({
+          last_called_at: new Date().toISOString(),
+          call_count: Number(currentUsage.data?.call_count ?? 0) + 1,
+          last_error: null,
+          updated_at: new Date().toISOString(),
+        }).eq('tool_id', selectedToolId)
+      } catch (toolError) {
+        const message = toolError instanceof Error ? toolError.message : '제작자 API 호출 실패'
+        const current = await admin.from('ai_tool_integrations').select('failure_count').eq('tool_id', selectedToolId).single()
+        await admin.from('ai_tool_integrations').update({
+          failure_count: Number(current.data?.failure_count ?? 0) + 1,
+          last_error: message.slice(0, 500),
+          updated_at: new Date().toISOString(),
+        }).eq('tool_id', selectedToolId)
+        return NextResponse.json({ error: `${selectedToolName} 연결 실패: ${message}` }, { status: 502 })
+      }
+    }
 
     // Supabase에 저장
     const sb = getSupabaseServer()
@@ -57,7 +110,7 @@ export async function POST(req: NextRequest) {
         ...aiPrediction.reasoning,
       }),
       ai_tool_id: selectedToolId,
-      ai_tool_name: 'AI Battle 기본 분석기',
+      ai_tool_name: selectedToolName,
     }).select().single()
 
     if (error) {

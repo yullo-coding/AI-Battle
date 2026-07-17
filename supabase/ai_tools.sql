@@ -12,11 +12,14 @@ CREATE TABLE IF NOT EXISTS ai_tools (
   pricing TEXT NOT NULL DEFAULT 'free' CHECK (pricing IN ('free','freemium','paid')),
   integration_type TEXT NOT NULL DEFAULT 'link' CHECK (integration_type IN ('built_in','link','api')),
   verification_status TEXT NOT NULL DEFAULT 'pending' CHECK (verification_status IN ('pending','verified','rejected')),
+  api_version TEXT,
   is_published BOOLEAN NOT NULL DEFAULT true,
   is_featured BOOLEAN NOT NULL DEFAULT false,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+ALTER TABLE ai_tools ADD COLUMN IF NOT EXISTS api_version TEXT;
 
 CREATE TABLE IF NOT EXISTS ai_tool_likes (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -38,13 +41,33 @@ CREATE TABLE IF NOT EXISTS ai_tool_reviews (
   UNIQUE(tool_id, user_email)
 );
 
+-- 제작자 API 주소와 인증 토큰은 공개 도구 정보와 분리한다.
+-- 이 테이블은 service_role만 접근하며 anon/authenticated 정책을 만들지 않는다.
+CREATE TABLE IF NOT EXISTS ai_tool_integrations (
+  tool_id UUID PRIMARY KEY REFERENCES ai_tools(id) ON DELETE CASCADE,
+  owner_email TEXT NOT NULL,
+  endpoint_url TEXT NOT NULL,
+  auth_token TEXT,
+  api_version TEXT NOT NULL DEFAULT '1.0',
+  status TEXT NOT NULL DEFAULT 'verified' CHECK (status IN ('pending','verified','disabled','failed')),
+  last_verified_at TIMESTAMPTZ,
+  last_called_at TIMESTAMPTZ,
+  call_count BIGINT NOT NULL DEFAULT 0,
+  failure_count BIGINT NOT NULL DEFAULT 0,
+  last_error TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
 CREATE INDEX IF NOT EXISTS idx_ai_tools_published ON ai_tools(is_published, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_ai_tool_likes_tool ON ai_tool_likes(tool_id);
 CREATE INDEX IF NOT EXISTS idx_ai_tool_reviews_tool ON ai_tool_reviews(tool_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_ai_tool_integrations_status ON ai_tool_integrations(status);
 
 ALTER TABLE ai_tools ENABLE ROW LEVEL SECURITY;
 ALTER TABLE ai_tool_likes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE ai_tool_reviews ENABLE ROW LEVEL SECURITY;
+ALTER TABLE ai_tool_integrations ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "public read tools" ON ai_tools;
 DROP POLICY IF EXISTS "anon manage tools" ON ai_tools;
@@ -52,9 +75,10 @@ DROP POLICY IF EXISTS "anon manage likes" ON ai_tool_likes;
 DROP POLICY IF EXISTS "anon manage reviews" ON ai_tool_reviews;
 
 CREATE POLICY "public read tools" ON ai_tools FOR SELECT TO anon USING (is_published = true);
-CREATE POLICY "anon manage tools" ON ai_tools FOR INSERT TO anon WITH CHECK (true);
 CREATE POLICY "anon manage likes" ON ai_tool_likes FOR ALL TO anon USING (true) WITH CHECK (true);
 CREATE POLICY "anon manage reviews" ON ai_tool_reviews FOR ALL TO anon USING (true) WITH CHECK (true);
+
+REVOKE ALL ON TABLE ai_tool_integrations FROM anon, authenticated;
 
 -- AI Battle 기본 무료 도구. 고정 UUID라 여러 번 실행해도 중복되지 않는다.
 INSERT INTO ai_tools (

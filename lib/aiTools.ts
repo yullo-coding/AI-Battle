@@ -15,6 +15,7 @@ export const DEFAULT_AI_TOOL: AITool = {
   pricing: 'free',
   integration_type: 'built_in',
   verification_status: 'verified',
+  api_version: null,
   is_published: true,
   is_featured: true,
   created_at: '',

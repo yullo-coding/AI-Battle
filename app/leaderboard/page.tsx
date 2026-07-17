@@ -7,6 +7,8 @@ import { getSupabase } from '@/lib/supabase'
 import type { Battle } from '@/lib/types'
 import { parseBattle } from '@/lib/types'
 import { formatPercent } from '@/lib/stocks'
+import Button from '@vibe/design-system/components/ui/Button'
+import { useLocale } from '@/components/LocaleProvider'
 
 interface UserStat {
   email: string
@@ -30,6 +32,7 @@ interface StockStat {
 }
 
 export default function LeaderboardPage() {
+  const { tr } = useLocale()
   const [loading, setLoading] = useState(true)
   const [battles, setBattles] = useState<Battle[]>([])
   const [nicknames, setNicknames] = useState<Record<string, string>>({})
@@ -105,8 +108,8 @@ export default function LeaderboardPage() {
       <div className="max-w-2xl mx-auto px-6 py-8">
 
         <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}>
-          <h1 className="text-3xl font-black text-white mb-1">인간 vs AI</h1>
-          <p className="text-muted text-sm mb-6">종료된 배틀의 전체 기록</p>
+          <h1 className="text-3xl font-black text-white mb-1">{tr('인간 vs AI', 'Human vs AI')}</h1>
+          <p className="text-muted text-sm mb-6">{tr('종료된 배틀의 전체 기록', 'All settled battle records')}</p>
         </motion.div>
 
         {loading ? (
@@ -116,10 +119,8 @@ export default function LeaderboardPage() {
         ) : total === 0 ? (
           <div className="text-center py-32 space-y-4">
             <div className="text-5xl">⚔️</div>
-            <p className="text-muted">아직 종료된 배틀이 없습니다.</p>
-            <Link href="/battle/new" className="inline-block px-6 py-3 bg-accent text-bg font-bold rounded-lg hover:bg-accent-dim transition-colors">
-              첫 배틀 시작하기
-            </Link>
+            <p className="text-muted">{tr('아직 종료된 배틀이 없습니다.', 'No battles have settled yet.')}</p>
+            <Link href="/battle/new"><Button size="lg">{tr('첫 배틀 시작하기', 'Start the first battle')}</Button></Link>
           </div>
         ) : (
           <div className="space-y-6">
@@ -127,22 +128,22 @@ export default function LeaderboardPage() {
             {/* 종합 스코어 */}
             <div className="grid grid-cols-2 gap-3">
               <div className="bg-up/8 border border-up/30 rounded-2xl p-5 text-center">
-                <div className="text-xs text-up font-mono mb-1">🧑 인간</div>
+                <div className="text-xs text-up font-mono mb-1">🧑 {tr('인간', 'Human')}</div>
                 <div className="text-4xl font-black text-white">{userWinRate}%</div>
-                <div className="text-muted text-xs font-mono mt-1">{userWinsTotal}승 / {total}전</div>
+                <div className="text-muted text-xs font-mono mt-1">{userWinsTotal} {tr('승', 'wins')} / {total} {tr('전', 'battles')}</div>
               </div>
               <div className="bg-[#A78BFA]/8 border border-[#A78BFA]/30 rounded-2xl p-5 text-center">
-                <div className="text-xs text-[#A78BFA] font-mono mb-1">🤖 AI 투자 도구</div>
+                <div className="text-xs text-[#A78BFA] font-mono mb-1">🤖 {tr('AI 투자 도구', 'AI investing tools')}</div>
                 <div className="text-4xl font-black text-white">{aiWinRate}%</div>
-                <div className="text-muted text-xs font-mono mt-1">{aiWinsTotal}승 / {total}전</div>
+                <div className="text-muted text-xs font-mono mt-1">{aiWinsTotal} {tr('승', 'wins')} / {total} {tr('전', 'battles')}</div>
               </div>
             </div>
 
             {/* 승률 바 */}
             <div className="bg-surface border border-border rounded-2xl p-4">
               <div className="flex justify-between text-xs font-mono mb-2">
-                <span className="text-up font-bold">인간 {userWinRate}%</span>
-                {tiesTotal > 0 && <span className="text-muted">무 {tiesTotal}</span>}
+                <span className="text-up font-bold">{tr('인간', 'Human')} {userWinRate}%</span>
+                {tiesTotal > 0 && <span className="text-muted">{tr('무', 'Draws')} {tiesTotal}</span>}
                 <span className="text-[#A78BFA] font-bold">AI {aiWinRate}%</span>
               </div>
               <div className="h-4 bg-border rounded-full overflow-hidden flex">
@@ -154,15 +155,16 @@ export default function LeaderboardPage() {
             {/* 탭 */}
             <div className="flex gap-1 bg-surface border border-border rounded-xl p-1">
               {(['users', 'stocks', 'recent'] as const).map(t => (
-                <button
+                <Button
                   key={t}
+                  type="button"
+                  size="sm"
+                  variant={tab === t ? 'primary' : 'ghost'}
                   onClick={() => setTab(t)}
-                  className={`flex-1 py-2 text-xs font-mono font-bold rounded-lg transition-all ${
-                    tab === t ? 'bg-accent text-bg' : 'text-muted hover:text-white'
-                  }`}
+                  className="flex-1"
                 >
-                  {t === 'users' ? '유저 랭킹' : t === 'stocks' ? '종목별' : '최근 결과'}
-                </button>
+                  {t === 'users' ? tr('유저 랭킹', 'User ranking') : t === 'stocks' ? tr('종목별', 'By stock') : tr('최근 결과', 'Recent results')}
+                </Button>
               ))}
             </div>
 
@@ -170,7 +172,7 @@ export default function LeaderboardPage() {
             {tab === 'users' && (
               <div className="space-y-2">
                 {userStats.length === 0 ? (
-                  <p className="text-muted text-center py-8">데이터 없음</p>
+                  <p className="text-muted text-center py-8">{tr('데이터 없음', 'No data')}</p>
                 ) : userStats.map((u, i) => (
                   <motion.div
                     key={u.email}
@@ -184,13 +186,13 @@ export default function LeaderboardPage() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="font-bold text-white truncate">{u.nickname}</div>
-                      <div className="text-xs text-muted font-mono">{u.total}전 · 평균오차 {u.avgUserError}%p</div>
+                      <div className="text-xs text-muted font-mono">{u.total} {tr('전', 'battles')} · {tr('평균오차', 'avg. error')} {u.avgUserError}%p</div>
                     </div>
                     <div className="text-right">
                       <div className={`text-xl font-black font-mono ${u.winRate >= 50 ? 'text-up' : 'text-down'}`}>
                         {u.winRate}%
                       </div>
-                      <div className="text-xs text-muted font-mono">{u.wins}승 {u.losses}패</div>
+                      <div className="text-xs text-muted font-mono">{u.wins} {tr('승', 'W')} {u.losses} {tr('패', 'L')}</div>
                     </div>
                   </motion.div>
                 ))}
@@ -214,10 +216,10 @@ export default function LeaderboardPage() {
                           <span>{s.market === 'KR' ? '🇰🇷' : '🇺🇸'}</span>
                           <span className="font-bold text-white">{s.name}</span>
                         </div>
-                        <div className="text-xs text-muted font-mono">{s.symbol} · {s.total}전</div>
+                        <div className="text-xs text-muted font-mono">{s.symbol} · {s.total} {tr('전', 'battles')}</div>
                       </div>
                       <div className="text-right text-xs font-mono">
-                        <span className="text-up font-bold">인간 {s.userWins}</span>
+                        <span className="text-up font-bold">{tr('인간', 'Human')} {s.userWins}</span>
                         <span className="text-muted mx-1">/</span>
                         <span className="text-[#A78BFA] font-bold">AI {s.aiWins}</span>
                       </div>
@@ -246,19 +248,19 @@ export default function LeaderboardPage() {
                     <div className={`text-xs font-bold font-mono w-14 flex-shrink-0 ${
                       b.winner === 'USER' ? 'text-up' : b.winner === 'AI' ? 'text-[#A78BFA]' : 'text-muted'
                     }`}>
-                      {b.winner === 'USER' ? '🧑 승' : b.winner === 'AI' ? '🤖 승' : '🤝 무'}
+                      {b.winner === 'USER' ? tr('🧑 승', '🧑 Win') : b.winner === 'AI' ? tr('🤖 승', '🤖 Win') : tr('🤝 무', '🤝 Draw')}
                     </div>
                     <div className="flex-1 min-w-0">
                       <span className="text-white font-medium">{b.stock_name}</span>
-                      <span className="text-muted text-xs font-mono ml-2">{nicknames[b.email] ?? '익명'}</span>
+                      <span className="text-muted text-xs font-mono ml-2">{nicknames[b.email] ?? tr('익명', 'Anonymous')}</span>
                     </div>
                     <div className="text-xs font-mono text-muted flex gap-2 flex-shrink-0">
                       <span className={b.user_change_percent != null && b.user_change_percent >= 0 ? 'text-up' : 'text-down'}>
-                        나 {formatPercent(b.user_change_percent ?? 0)}
+                        {tr('나', 'Me')} {formatPercent(b.user_change_percent ?? 0)}
                       </span>
                       <span className="text-[#A78BFA]">AI {formatPercent(b.ai_change_percent ?? 0)}</span>
                       <span className={b.actual_change_percent != null && b.actual_change_percent >= 0 ? 'text-up' : 'text-down'}>
-                        실 {b.actual_change_percent != null ? formatPercent(b.actual_change_percent) : '?'}
+                        {tr('실', 'Actual')} {b.actual_change_percent != null ? formatPercent(b.actual_change_percent) : '?'}
                       </span>
                     </div>
                     <Link href={`/battle/${b.id}`} className="text-muted hover:text-accent transition-colors text-xs font-mono flex-shrink-0">→</Link>

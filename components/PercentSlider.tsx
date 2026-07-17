@@ -1,5 +1,6 @@
 'use client'
 
+import Button from '@vibe/design-system/components/ui/Button'
 
 interface PercentSliderProps {
   value: number
@@ -79,10 +80,13 @@ export default function PercentSlider({ value, onChange }: PercentSliderProps) {
 
       {/* Direct input */}
       <div className="flex items-center justify-center gap-2">
-        <button
+        <Button
+          type="button"
+          size="sm"
+          variant="secondary"
           onClick={() => onChange(value - 1)}
-          className="w-9 h-9 flex items-center justify-center rounded-lg border border-border text-muted hover:border-down hover:text-down transition-colors font-mono text-lg"
-        >−</button>
+          className="w-9 min-h-9 px-0 text-lg hover:border-down hover:text-down"
+        >−</Button>
         <div className="relative">
           <input
             type="number"
@@ -93,19 +97,25 @@ export default function PercentSlider({ value, onChange }: PercentSliderProps) {
           />
           <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted font-mono text-sm pointer-events-none">%</span>
         </div>
-        <button
+        <Button
+          type="button"
+          size="sm"
+          variant="secondary"
           onClick={() => onChange(value + 1)}
-          className="w-9 h-9 flex items-center justify-center rounded-lg border border-border text-muted hover:border-up hover:text-up transition-colors font-mono text-lg"
-        >+</button>
+          className="w-9 min-h-9 px-0 text-lg hover:border-up hover:text-up"
+        >+</Button>
       </div>
 
       {/* Preset buttons */}
       <div className="flex flex-wrap gap-2 justify-center">
         {[-50, -20, -10, -5, 0, 5, 10, 20, 50].map(preset => (
-          <button
+          <Button
             key={preset}
+            type="button"
+            size="sm"
+            variant="secondary"
             onClick={() => onChange(preset)}
-            className={`px-3 py-1.5 rounded-lg text-xs font-mono font-bold border transition-all ${
+            className={`min-h-8 px-3 font-mono ${
               value === preset
                 ? preset > 0
                   ? 'bg-up/20 border-up text-up'
@@ -116,7 +126,7 @@ export default function PercentSlider({ value, onChange }: PercentSliderProps) {
             }`}
           >
             {preset > 0 ? '+' : ''}{preset}%
-          </button>
+          </Button>
         ))}
       </div>
     </div>

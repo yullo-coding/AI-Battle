@@ -2,7 +2,10 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { motion } from 'framer-motion'
+import Link from 'next/link'
+import Button from '@vibe/design-system/components/ui/Button'
 import type { UserSession } from '@/lib/types'
+import { useLocale } from '@/components/LocaleProvider'
 
 const TICKERS = [
   { symbol: 'NVDA', value: '+4.2%', up: true },
@@ -15,12 +18,6 @@ const TICKERS = [
   { symbol: '카카오', value: '-2.1%', up: false },
 ]
 
-const STATS = [
-  { value: '73%', label: '개인투자자 손실 비율' },
-  { value: 'AI', label: 'Claude Sonnet 4.6 대전' },
-  { value: '1~7일', label: '유저 선택 배틀 기간' },
-]
-
 interface HeroSectionProps {
   session: UserSession | null
   onAuthClick: () => void
@@ -28,6 +25,7 @@ interface HeroSectionProps {
 }
 
 export default function HeroSection({ session, onAuthClick, onLogout }: HeroSectionProps) {
+  const { tr } = useLocale()
   const [tickerPos, setTickerPos] = useState(0)
   const tickerRef = useRef<NodeJS.Timeout | null>(null)
 
@@ -41,6 +39,11 @@ export default function HeroSection({ session, onAuthClick, onLogout }: HeroSect
   const itemWidth = 160
   const totalWidth = TICKERS.length * itemWidth
   const offset = ((tickerPos % totalWidth) + totalWidth) % totalWidth
+  const stats = [
+    { value: '10', label: tr('한국·미국 인기 종목', 'Popular KR & US stocks') },
+    { value: 'AI', label: tr('제작자 AI와 직접 대결', 'Battle builder-made AI') },
+    { value: '10', label: tr('선택 가능한 거래일', 'Selectable trading days') },
+  ]
 
   return (
     <section className="relative min-h-screen flex flex-col grid-bg scanlines overflow-hidden">
@@ -68,18 +71,18 @@ export default function HeroSection({ session, onAuthClick, onLogout }: HeroSect
         >
 
           <h1 className="text-4xl md:text-6xl font-black text-white mb-4 leading-tight">
-            당신의 직관이<br />
-            <span className="gradient-text-battle">AI를 이길 수 있을까?</span>
+            {tr('당신의 직관이', 'Can your instincts')}<br />
+            <span className="gradient-text-battle">{tr('AI를 이길 수 있을까?', 'beat the AI?')}</span>
           </h1>
 
           <p className="text-muted text-lg md:text-xl max-w-2xl mx-auto mb-10 leading-relaxed">
-            Claude AI와 주식 방향 예측 배틀.<br />
-            <span className="text-white">실제 주가</span>로 승패를 가린다.
+            {tr('사람과 AI 투자 도구의 주가 예측 배틀.', 'A stock prediction battle between people and AI investing tools.')}<br />
+            {tr(<><span className="text-white">실제 주가</span>로 승패를 가립니다.</>, <>Winners are decided by <span className="text-white">real market prices</span>.</>)}
           </p>
 
           {/* Stats */}
           <div className="flex flex-wrap items-center justify-center gap-8 mb-12">
-            {STATS.map((s, i) => (
+            {stats.map((s, i) => (
               <motion.div
                 key={i}
                 initial={{ opacity: 0, y: 20 }}
@@ -97,29 +100,15 @@ export default function HeroSection({ session, onAuthClick, onLogout }: HeroSect
           {session ? (
             <div className="flex flex-col items-center gap-3">
               <div className="flex items-center gap-3 text-sm font-mono text-muted">
-                <span>안녕하세요, <span className="text-accent">{session.nickname}</span>님</span>
-                <button
-                  onClick={onLogout}
-                  className="text-xs text-muted/60 hover:text-danger transition-colors underline underline-offset-2"
-                >
-                  로그아웃
-                </button>
+                <span>{tr('안녕하세요,', 'Welcome,')} <span className="text-accent">{session.nickname}</span>{tr('님', '')}</span>
+                <Button size="sm" variant="ghost" onClick={onLogout}>{tr('로그아웃', 'Sign out')}</Button>
               </div>
-              <a
-                href="/battle/new"
-                className="px-10 py-4 bg-accent text-bg font-bold text-lg rounded-xl btn-pulse hover:bg-accent-dim transition-colors"
-              >
-                ⚔️ 배틀 시작하기
-              </a>
+              <Link href="/battle/new"><Button size="lg" pulse>⚔️ {tr('배틀 시작하기', 'Start Battle')}</Button></Link>
             </div>
           ) : (
-            <motion.button
-              onClick={onAuthClick}
-              whileTap={{ scale: 0.97 }}
-              className="px-10 py-4 bg-accent text-bg font-bold text-lg rounded-xl btn-pulse hover:bg-accent-dim transition-colors"
-            >
-              ⚔️ 지금 참전하기
-            </motion.button>
+            <motion.div whileTap={{ scale: 0.97 }} className="inline-block">
+              <Button size="lg" pulse onClick={onAuthClick}>⚔️ {tr('지금 참전하기', 'Join the Battle')}</Button>
+            </motion.div>
           )}
         </motion.div>
       </div>

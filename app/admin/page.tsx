@@ -7,8 +7,11 @@ import { getSupabase } from '@/lib/supabase'
 import { formatPrice, formatPercent } from '@/lib/stocks'
 import type { Battle } from '@/lib/types'
 import { parseBattle } from '@/lib/types'
+import Button from '@vibe/design-system/components/ui/Button'
+import { useLocale } from '@/components/LocaleProvider'
 
 export default function AdminPage() {
+  const { tr } = useLocale()
   const [battles, setBattles] = useState<Battle[]>([])
   const [loading, setLoading] = useState(true)
   const [log, setLog] = useState('')
@@ -28,21 +31,21 @@ export default function AdminPage() {
   useEffect(() => { fetchBattles() }, [])
 
   async function resolveBattle(id: string) {
-    setLog(`배틀 ${id.slice(0, 8)}... 결과 집계 중`)
+    setLog(tr(`배틀 ${id.slice(0, 8)}... 결과 집계 중`, `Resolving battle ${id.slice(0, 8)}...`))
     try {
       const res = await fetch(`/api/battle/${id}/resolve`, { method: 'POST' })
       const data = await res.json()
       if (data.already) {
-        setLog('이미 결과가 확정된 배틀입니다.')
+        setLog(tr('이미 결과가 확정된 배틀입니다.', 'This battle is already settled.'))
       } else if (data.error) {
-        setLog(`에러: ${data.error}`)
+        setLog(`${tr('오류', 'Error')}: ${data.error}`)
       } else {
         const b = data.battle as Battle
-        setLog(`✓ 결과 확정: 실제 ${b.actual_change_percent?.toFixed(2)}% → ${b.winner} 승`)
+        setLog(tr(`✓ 결과 확정: 실제 ${b.actual_change_percent?.toFixed(2)}% → ${b.winner} 승`, `✓ Settled: actual ${b.actual_change_percent?.toFixed(2)}% → ${b.winner} wins`))
         await fetchBattles()
       }
     } catch (err: unknown) {
-      setLog(`에러: ${err instanceof Error ? err.message : String(err)}`)
+      setLog(`${tr('오류', 'Error')}: ${err instanceof Error ? err.message : String(err)}`)
     }
   }
 
@@ -50,7 +53,7 @@ export default function AdminPage() {
     const sb = getSupabase()
     if (!sb) return
     await sb.from('battles').delete().eq('id', id)
-    setLog(`배틀 ${id.slice(0, 8)}... 삭제됨`)
+    setLog(tr(`배틀 ${id.slice(0, 8)}... 삭제됨`, `Battle ${id.slice(0, 8)}... deleted`))
     await fetchBattles()
   }
 
@@ -67,24 +70,24 @@ export default function AdminPage() {
         {/* Header */}
         <div className="mb-8 flex items-start justify-between">
           <div>
-            <div className="tag text-danger mb-1">배틀 관리</div>
-            <h1 className="text-2xl font-bold text-white">배틀 관리</h1>
+            <div className="tag text-danger mb-1">ADMIN</div>
+            <h1 className="text-2xl font-bold text-white">{tr('배틀 관리', 'Battle Management')}</h1>
           </div>
           <Link
             href="/"
             className="text-muted text-xs font-mono hover:text-white transition-colors"
           >
-            ← 홈
+            ← {tr('홈', 'Home')}
           </Link>
         </div>
 
         {/* Stats */}
         {resolved.length > 0 && (
           <div className="grid grid-cols-4 gap-3 mb-8">
-            <StatCard label="전체" value={battles.length} color="text-white" />
-            <StatCard label="인간 승" value={userWins} color="text-up" />
-            <StatCard label="AI 승" value={aiWins} color="text-[#A78BFA]" />
-            <StatCard label="무승부" value={ties} color="text-muted" />
+            <StatCard label={tr('전체', 'Total')} value={battles.length} color="text-white" />
+            <StatCard label={tr('인간 승', 'Human wins')} value={userWins} color="text-up" />
+            <StatCard label={tr('AI 승', 'AI wins')} value={aiWins} color="text-[#A78BFA]" />
+            <StatCard label={tr('무승부', 'Draws')} value={ties} color="text-muted" />
           </div>
         )}
 
@@ -98,7 +101,7 @@ export default function AdminPage() {
         {/* Pending battles */}
         {pending.length > 0 && (
           <div className="mb-8">
-            <div className="tag text-accent mb-4">진행 중 ({pending.length})</div>
+            <div className="tag text-accent mb-4">{tr('진행 중', 'In progress')} ({pending.length})</div>
             <div className="space-y-2">
               {pending.map(b => (
                 <BattleRow
@@ -114,14 +117,14 @@ export default function AdminPage() {
 
         {/* Resolved battles */}
         <div>
-          <div className="tag text-muted mb-4">완료 ({resolved.length})</div>
+          <div className="tag text-muted mb-4">{tr('완료', 'Settled')} ({resolved.length})</div>
           {loading ? (
             <div className="flex justify-center py-8">
               <div className="w-6 h-6 border-2 border-accent border-t-transparent rounded-full animate-spin" />
             </div>
           ) : resolved.length === 0 ? (
             <div className="text-center py-8 text-muted border border-border rounded-xl text-sm">
-              결과 확정된 배틀 없음
+              {tr('결과가 확정된 배틀이 없습니다.', 'No settled battles yet.')}
             </div>
           ) : (
             <div className="space-y-2">
@@ -158,6 +161,7 @@ function BattleRow({
   onResolve?: () => void
   onDelete: () => void
 }) {
+  const { tr } = useLocale()
   const mkt = b.stock_market as 'US' | 'KR'
   const today = new Date().toISOString().split('T')[0]
   const canResolve = b.status === 'pending' && today >= b.end_date
@@ -181,12 +185,12 @@ function BattleRow({
           <span className="text-xs text-muted font-mono">→ {b.end_date}</span>
         </div>
         <div className="flex items-center gap-3 mt-0.5 text-xs font-mono text-muted flex-wrap">
-          <span>시작 {formatPrice(b.start_price, mkt)}</span>
-          <span>나 {formatPercent(b.user_change_percent ?? 0)}</span>
+          <span>{tr('시작', 'Start')} {formatPrice(b.start_price, mkt)}</span>
+          <span>{tr('나', 'Me')} {formatPercent(b.user_change_percent ?? 0)}</span>
           <span className="text-[#A78BFA]">AI {formatPercent(b.ai_change_percent ?? 0)}</span>
           {b.actual_change_percent != null && (
             <span className={b.actual_change_percent >= 0 ? 'text-up' : 'text-down'}>
-              실제 {formatPercent(b.actual_change_percent)}
+              {tr('실제', 'Actual')} {formatPercent(b.actual_change_percent)}
             </span>
           )}
           {b.winner && <span className={`font-bold ${winnerColor}`}>{b.winner}</span>}
@@ -201,22 +205,12 @@ function BattleRow({
           href={`/battle/${b.id}`}
           className="px-2 py-1 text-xs border border-border text-muted rounded hover:border-accent hover:text-accent transition-colors font-mono"
         >
-          보기
+          {tr('보기', 'View')}
         </Link>
         {canResolve && onResolve && (
-          <button
-            onClick={onResolve}
-            className="px-2 py-1 text-xs border border-accent text-accent rounded hover:bg-accent/10 transition-colors font-mono"
-          >
-            확정
-          </button>
+          <Button size="sm" variant="secondary" onClick={onResolve}>{tr('확정', 'Settle')}</Button>
         )}
-        <button
-          onClick={onDelete}
-          className="px-2 py-1 text-xs border border-border text-muted rounded hover:border-danger hover:text-danger transition-colors font-mono"
-        >
-          삭제
-        </button>
+        <Button size="sm" variant="danger" onClick={onDelete}>{tr('삭제', 'Delete')}</Button>
       </div>
     </motion.div>
   )

@@ -7,7 +7,7 @@ export interface AIPrediction {
   confidence: number       // 60~90
   brief: string
   reasoning: AIReasoning
-  mode: 'claude' | 'rule-based'
+  mode: 'claude' | 'rule-based' | 'external'
 }
 
 // ─── Rule-based fallback ─────────────────────────────────────

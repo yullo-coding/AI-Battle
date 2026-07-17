@@ -7,8 +7,11 @@ import { loadSession } from '@/lib/storage'
 import type { UserSession } from '@/lib/types'
 import ProfileModal from '@/components/ProfileModal'
 import EmailAuthModal from '@/components/EmailAuthModal'
+import Button from '@vibe/design-system/components/ui/Button'
+import { useLocale } from '@/components/LocaleProvider'
 
 export default function Header() {
+  const { locale, setLocale, tr } = useLocale()
   const [session, setSession] = useState<UserSession | null>(null)
   const [showProfile, setShowProfile] = useState(false)
   const [showAuth, setShowAuth] = useState(false)
@@ -44,22 +47,35 @@ export default function Header() {
 
           <nav className="flex items-center gap-3 sm:gap-4">
             <Link href="/tools" className="text-xs font-mono text-muted hover:text-white transition-colors">
-              AI 도구
+              {tr('AI 도구', 'AI Tools')}
             </Link>
             <Link href="/leaderboard" className="text-xs font-mono text-muted hover:text-white transition-colors">
-              랭킹
+              {tr('랭킹', 'Ranking')}
             </Link>
             <Link href="/my-battles" className="text-xs font-mono text-muted hover:text-white transition-colors">
-              내 배틀
+              {tr('내 배틀', 'My Battles')}
             </Link>
             <Link href="/battle/new" className="text-xs font-mono text-accent hover:text-accent-dim transition-colors">
-              ⚔️ 배틀
+              ⚔️ {tr('배틀', 'Battle')}
             </Link>
 
+            <Button
+              size="sm"
+              variant="secondary"
+              className="min-w-10 px-2"
+              onClick={() => setLocale(locale === 'ko' ? 'en' : 'ko')}
+              aria-label={locale === 'ko' ? 'Switch to English' : '한국어로 전환'}
+            >
+              <span className="sm:hidden">{locale === 'ko' ? 'EN' : '한'}</span>
+              <span className="hidden sm:inline">{locale === 'ko' ? 'English' : '한국어'}</span>
+            </Button>
+
             {session ? (
-              <button
+              <Button
+                variant="secondary"
+                size="sm"
                 onClick={() => setShowProfile(true)}
-                className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-border hover:border-accent/50 transition-colors"
+                className="px-3"
               >
                 <div className="w-5 h-5 rounded-full bg-accent/20 flex items-center justify-center">
                   <span className="text-accent text-xs font-bold">
@@ -67,14 +83,11 @@ export default function Header() {
                   </span>
                 </div>
                 <span className="text-xs font-mono text-white">{session.nickname}</span>
-              </button>
+              </Button>
             ) : (
-              <button
-                onClick={() => setShowAuth(true)}
-                className="px-3 py-1.5 text-xs font-mono rounded-lg bg-accent text-bg font-bold hover:bg-accent-dim transition-colors"
-              >
-                로그인
-              </button>
+              <Button size="sm" onClick={() => setShowAuth(true)}>
+                {tr('로그인', 'Sign in')}
+              </Button>
             )}
           </nav>
         </div>

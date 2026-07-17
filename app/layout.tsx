@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import './globals.css'
 import Header from '@/components/Header'
+import LocaleProvider from '@/components/LocaleProvider'
 
 export const metadata: Metadata = {
   title: 'AI Battle — 인간 vs AI 투자 배틀',
@@ -16,8 +17,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="ko">
       <body>
-        <Header />
-        {children}
+        <LocaleProvider>
+          <Header />
+          {children}
+        </LocaleProvider>
       </body>
     </html>
   )

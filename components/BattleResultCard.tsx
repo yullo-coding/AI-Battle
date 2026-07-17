@@ -5,6 +5,7 @@ import Link from 'next/link'
 import type { Battle } from '@/lib/types'
 import { formatPercent } from '@/lib/stocks'
 import CountdownTimer from './CountdownTimer'
+import { useLocale } from '@/components/LocaleProvider'
 
 interface BattleResultCardProps {
   battle: Battle
@@ -12,6 +13,7 @@ interface BattleResultCardProps {
 }
 
 export default function BattleResultCard({ battle, showLink = true }: BattleResultCardProps) {
+  const { tr } = useLocale()
   const isPending = battle.status === 'pending'
   const mkt = battle.stock_market as 'US' | 'KR'
 
@@ -22,7 +24,7 @@ export default function BattleResultCard({ battle, showLink = true }: BattleResu
     const aiPct = battle.ai_change_percent ?? 0
     const actualPct = battle.actual_change_percent ?? 0
 
-    const winnerLabel = winner === 'USER' ? '🏆 인간 승' : winner === 'AI' ? '🤖 AI 승' : '🤝 무승부'
+    const winnerLabel = winner === 'USER' ? tr('🏆 인간 승', '🏆 Human wins') : winner === 'AI' ? tr('🤖 AI 승', '🤖 AI wins') : tr('🤝 무승부', '🤝 Draw')
     const winnerColor = winner === 'USER' ? 'text-bg bg-up' : winner === 'AI' ? 'text-white bg-[#A78BFA]' : 'text-bg bg-accent'
 
     return (
@@ -52,27 +54,27 @@ export default function BattleResultCard({ battle, showLink = true }: BattleResu
         {/* Numbers */}
         <div className="grid grid-cols-3 gap-0 text-center divide-x divide-border px-0 py-3">
           <div className="px-3">
-            <div className="text-[10px] text-muted font-mono mb-0.5">내 예측</div>
+            <div className="text-[10px] text-muted font-mono mb-0.5">{tr('내 예측', 'My prediction')}</div>
             <div className={`text-base font-black font-mono ${userPct >= 0 ? 'text-up' : 'text-down'}`}>
               {formatPercent(userPct)}
             </div>
             {battle.user_error != null && (
-              <div className="text-[10px] text-muted mt-0.5">오차 {battle.user_error.toFixed(1)}%p</div>
+              <div className="text-[10px] text-muted mt-0.5">{tr('오차', 'Error')} {battle.user_error.toFixed(1)}%p</div>
             )}
           </div>
           <div className="px-3">
-            <div className="text-[10px] text-muted font-mono mb-0.5">실제</div>
+            <div className="text-[10px] text-muted font-mono mb-0.5">{tr('실제', 'Actual')}</div>
             <div className={`text-base font-black font-mono ${actualPct >= 0 ? 'text-up' : 'text-down'}`}>
               {formatPercent(actualPct)}
             </div>
           </div>
           <div className="px-3">
-            <div className="text-[10px] text-muted font-mono mb-0.5">{battle.ai_tool_name ?? 'AI 도구'} 예측</div>
+            <div className="text-[10px] text-muted font-mono mb-0.5">{battle.ai_tool_name ?? tr('AI 도구', 'AI tool')} {tr('예측', 'prediction')}</div>
             <div className="text-base font-black font-mono text-[#A78BFA]">
               {formatPercent(aiPct)}
             </div>
             {battle.ai_error != null && (
-              <div className="text-[10px] text-muted mt-0.5">오차 {battle.ai_error.toFixed(1)}%p</div>
+              <div className="text-[10px] text-muted mt-0.5">{tr('오차', 'Error')} {battle.ai_error.toFixed(1)}%p</div>
             )}
           </div>
         </div>
@@ -83,7 +85,7 @@ export default function BattleResultCard({ battle, showLink = true }: BattleResu
               href={`/battle/${battle.id}`}
               className="block w-full text-center py-2 border border-white/20 text-white/70 rounded-lg text-xs font-mono hover:border-accent hover:text-accent transition-colors"
             >
-              결과 보기 →
+              {tr('결과 보기', 'View result')} →
             </Link>
           </div>
         )}
@@ -117,7 +119,7 @@ export default function BattleResultCard({ battle, showLink = true }: BattleResu
         </div>
         <div className="flex items-center gap-1.5">
           <span className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse" />
-          <span className="text-accent text-xs font-mono">진행 중</span>
+          <span className="text-accent text-xs font-mono">{tr('진행 중', 'In progress')}</span>
         </div>
       </div>
 
@@ -125,13 +127,13 @@ export default function BattleResultCard({ battle, showLink = true }: BattleResu
       <div className="px-4 py-3 flex items-center justify-between">
         <div className="grid grid-cols-2 gap-6 text-center">
           <div>
-            <div className="text-[10px] text-muted font-mono mb-0.5">내 예측</div>
+            <div className="text-[10px] text-muted font-mono mb-0.5">{tr('내 예측', 'My prediction')}</div>
             <div className={`text-base font-black font-mono ${userPct >= 0 ? 'text-up' : 'text-down'}`}>
               {formatPercent(userPct)}
             </div>
           </div>
           <div>
-            <div className="text-[10px] text-muted font-mono mb-0.5">{battle.ai_tool_name ?? 'AI 도구'} 예측</div>
+            <div className="text-[10px] text-muted font-mono mb-0.5">{battle.ai_tool_name ?? tr('AI 도구', 'AI tool')} {tr('예측', 'prediction')}</div>
             <div className="text-base font-black font-mono text-[#A78BFA]">
               {formatPercent(aiPct)}
             </div>
@@ -148,7 +150,7 @@ export default function BattleResultCard({ battle, showLink = true }: BattleResu
             href={`/battle/${battle.id}`}
             className="block w-full text-center py-2 border border-white/20 text-white/70 rounded-lg text-xs font-mono hover:border-accent hover:text-accent transition-colors"
           >
-            결과 보기 →
+            {tr('결과 보기', 'View result')} →
           </Link>
         </div>
       )}

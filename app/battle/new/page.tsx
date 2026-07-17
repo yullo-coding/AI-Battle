@@ -17,16 +17,13 @@ import EmailAuthModal from '@/components/EmailAuthModal'
 import AIToolSelector from '@/components/AIToolSelector'
 import { DEFAULT_AI_TOOL, DEFAULT_TOOL_ID, fetchAITools } from '@/lib/aiTools'
 import type { AITool } from '@/lib/types'
+import Button from '@vibe/design-system/components/ui/Button'
+import { useLocale } from '@/components/LocaleProvider'
 
 type Step = 1 | 2 | 3 | 4 | 5 | 6
 
-const AI_STEPS = [
-  { label: '데이터 수집 중', detail: 'Yahoo Finance API 호출...' },
-  { label: '지표 분석 중', detail: 'RSI · MACD · 볼린저 · MA 계산...' },
-  { label: '예측 생성 중', detail: 'Claude Sonnet 4.6 추론 중...' },
-]
-
 export default function NewBattlePage() {
+  const { locale, tr } = useLocale()
   const [step, setStep] = useState<Step>(1)
   const [symbol, setSymbol] = useState('')
   const [endDate, setEndDate] = useState('')
@@ -55,7 +52,14 @@ export default function NewBattlePage() {
 
   useEffect(() => {
     fetchAITools()
-      .then(setAiTools)
+      .then(tools => {
+        setAiTools(tools)
+        const requestedToolId = new URLSearchParams(window.location.search).get('tool')
+        const requestedTool = tools.find(tool => tool.id === requestedToolId)
+        if (requestedTool && (requestedTool.integration_type === 'built_in' || (requestedTool.integration_type === 'api' && requestedTool.verification_status === 'verified'))) {
+          setSelectedToolId(requestedTool.id)
+        }
+      })
       .catch(() => setAiTools([]))
   }, [])
 
@@ -69,7 +73,7 @@ export default function NewBattlePage() {
     fetch(`/api/stocks/${encodeURIComponent(s)}`)
       .then(res => { if (!res.ok) throw new Error(); return res.json() })
       .then(data => { setAnalysis(data); setAnalysisLoading(false) })
-      .catch(() => { setAnalysisError('주가 데이터를 불러오지 못했습니다. 다시 시도해주세요.'); setAnalysisLoading(false) })
+      .catch(() => { setAnalysisError(tr('주가 데이터를 불러오지 못했습니다. 다시 시도해주세요.', 'Could not load market data. Please try again.')); setAnalysisLoading(false) })
   }
 
   // Step 3 → 4: 결과일 선택 시 최신 분석 데이터로 한 번 더 갱신한다.
@@ -81,7 +85,7 @@ export default function NewBattlePage() {
     fetch(`/api/stocks/${encodeURIComponent(symbol)}`)
       .then(res => { if (!res.ok) throw new Error(); return res.json() })
       .then(data => { setAnalysis(data); setAnalysisLoading(false) })
-      .catch(() => { setAnalysisError('주가 데이터를 불러오지 못했습니다. 다시 시도해주세요.'); setAnalysisLoading(false) })
+      .catch(() => { setAnalysisError(tr('주가 데이터를 불러오지 못했습니다. 다시 시도해주세요.', 'Could not load market data. Please try again.')); setAnalysisLoading(false) })
   }
 
   async function handleSubmitPrediction() {
@@ -117,7 +121,7 @@ export default function NewBattlePage() {
 
       if (!res.ok) {
         const err = await res.json()
-        throw new Error(err.error ?? '배틀 생성 실패')
+        throw new Error(locale === 'en' ? 'Could not create the battle. Check the selected AI connection.' : (err.error ?? '배틀 생성 실패'))
       }
 
       const data = await res.json() as { battle: Battle; aiPrediction: AIPrediction }
@@ -212,7 +216,7 @@ export default function NewBattlePage() {
                       onClick={() => setPredExpanded(v => !v)}
                     >
                       <div>
-                        <div className="text-[11px] font-mono text-muted mb-0.5">내 예측</div>
+                        <div className="text-[11px] font-mono text-muted mb-0.5">{tr('내 예측', 'My prediction')}</div>
                         <div className="flex items-baseline gap-2">
                           <span className={`font-black font-mono transition-all duration-200 ${predExpanded ? 'text-4xl' : 'text-xl'} ${
                             userPercent > 0 ? 'text-up' : userPercent < 0 ? 'text-down' : 'text-white'
@@ -233,12 +237,15 @@ export default function NewBattlePage() {
                       </div>
                       <div className="flex items-center gap-2">
                         {analysis?.quote.market === 'US' && (
-                          <button
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="secondary"
                             onClick={e => { e.stopPropagation(); setCurrency(c => c === 'KRW' ? 'USD' : 'KRW') }}
-                            className="text-[10px] font-mono px-2 py-1 rounded border border-border text-muted hover:border-accent hover:text-accent transition-colors"
+                            className="min-h-8 px-2 text-[10px] font-mono"
                           >
                             {currency === 'KRW' ? '₩→$' : '$→₩'}
-                          </button>
+                          </Button>
                         )}
                         <span className="text-muted text-xs font-mono">
                           {predExpanded ? '▼' : '▲'}
@@ -262,22 +269,20 @@ export default function NewBattlePage() {
                               <p className="text-xs text-down font-mono">{submitError}</p>
                             )}
                             <div className="flex gap-2">
-                              <button
-                                onClick={() => setStep(3)}
-                                className="px-4 py-2.5 border border-border text-muted rounded-xl text-xs font-mono hover:border-white hover:text-white transition-colors"
-                              >
-                                ← 날짜
-                              </button>
-                              <button
+                              <Button type="button" variant="secondary" onClick={() => setStep(3)}>
+                                ← {tr('날짜', 'Date')}
+                              </Button>
+                              <Button
+                                type="button"
                                 onClick={handleSubmitPrediction}
                                 disabled={submitting}
-                                className="flex-1 py-2.5 bg-accent text-bg font-bold rounded-xl hover:bg-accent-dim transition-colors disabled:opacity-50 text-sm"
+                                className="flex-1"
                               >
-                                {submitting ? '제출 중...' : 'AI와 배틀 시작 ⚔️'}
-                              </button>
+                                {submitting ? tr('제출 중...', 'Submitting...') : tr('AI와 배틀 시작 ⚔️', 'Start AI Battle ⚔️')}
+                              </Button>
                             </div>
                             {!session && (
-                              <p className="text-[11px] text-muted text-center">제출 시 이메일 인증이 필요합니다.</p>
+                              <p className="text-[11px] text-muted text-center">{tr('제출 시 이메일 인증이 필요합니다.', 'Email sign-in is required to submit.')}</p>
                             )}
                           </div>
                         </motion.div>
@@ -293,7 +298,7 @@ export default function NewBattlePage() {
         {/* STEP 5 — AI 로딩 */}
         {step === 5 && (
           <motion.div key="step5" {...fadeSlide} className="max-w-lg mx-auto px-6 py-8">
-            <AILoadingScreen aiStep={aiStep} />
+            <AILoadingScreen aiStep={aiStep} toolName={aiTools.find(tool => tool.id === selectedToolId)?.name ?? DEFAULT_AI_TOOL.name} />
           </motion.div>
         )}
 
@@ -334,33 +339,36 @@ function StepIndicator({ step }: { step: Step }) {
 }
 
 function AnalysisLoader() {
+  const { tr } = useLocale()
   return (
     <div className="flex flex-col items-center justify-center py-20 space-y-6">
       <div className="w-12 h-12 border-2 border-accent border-t-transparent rounded-full animate-spin" />
       <div className="text-center">
-        <div className="tag text-accent mb-2">데이터 로딩</div>
-        <p className="text-muted text-sm">주가 지표를 불러오는 중...</p>
+        <div className="tag text-accent mb-2">{tr('데이터 로딩', 'Loading data')}</div>
+        <p className="text-muted text-sm">{tr('주가 지표를 불러오는 중...', 'Loading stock indicators...')}</p>
       </div>
     </div>
   )
 }
 
 function ErrorState({ message, onRetry }: { message: string; onRetry: () => void }) {
+  const { tr } = useLocale()
   return (
     <div className="flex flex-col items-center justify-center py-20 space-y-4 text-center">
       <div className="text-4xl">⚠️</div>
       <p className="text-down text-sm">{message}</p>
-      <button
-        onClick={onRetry}
-        className="px-6 py-2 border border-accent text-accent rounded-lg text-sm font-mono hover:bg-accent/10 transition-colors"
-      >
-        다시 시도
-      </button>
+      <Button variant="secondary" onClick={onRetry}>{tr('다시 시도', 'Try again')}</Button>
     </div>
   )
 }
 
-function AILoadingScreen({ aiStep }: { aiStep: number }) {
+function AILoadingScreen({ aiStep, toolName }: { aiStep: number; toolName: string }) {
+  const { tr } = useLocale()
+  const steps = [
+    { label: tr('데이터 수집 중', 'Collecting data'), detail: tr('최신 시세와 시장 데이터 확인...', 'Checking latest prices and market data...') },
+    { label: tr('지표 분석 중', 'Analyzing indicators'), detail: tr('RSI · MACD · 볼린저 · 이동평균선 계산...', 'Calculating RSI, MACD, Bollinger Bands, and moving averages...') },
+    { label: tr('예측 생성 중', 'Generating prediction'), detail: tr(`${toolName}에 예측 요청 중...`, `Requesting a prediction from ${toolName}...`) },
+  ]
   return (
     <div className="flex flex-col items-center justify-center py-20 space-y-8">
       <motion.div
@@ -369,12 +377,12 @@ function AILoadingScreen({ aiStep }: { aiStep: number }) {
         className="w-16 h-16 border-2 border-[#A78BFA] border-t-transparent rounded-full"
       />
       <div className="text-center space-y-2">
-        <div className="tag text-[#A78BFA] mb-3">AI 분석</div>
-        <p className="text-white font-bold text-lg">Claude가 분석 중...</p>
-        <p className="text-muted text-sm">잠시만 기다려주세요</p>
+        <div className="tag text-[#A78BFA] mb-3">{tr('AI 분석', 'AI Analysis')}</div>
+        <p className="text-white font-bold text-lg">{tr(`${toolName} 분석 중...`, `${toolName} is analyzing...`)}</p>
+        <p className="text-muted text-sm">{tr('잠시만 기다려주세요', 'This may take a few seconds')}</p>
       </div>
       <div className="w-full max-w-xs space-y-3">
-        {AI_STEPS.map((s, i) => (
+        {steps.map((s, i) => (
           <motion.div
             key={i}
             initial={{ opacity: 0.3 }}

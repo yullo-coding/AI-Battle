@@ -5,6 +5,8 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { authenticateEmail, saveSession, formatNickname } from '@/lib/storage'
 import type { UserSession } from '@/lib/types'
 import Input from '@vibe/design-system/components/ui/Input'
+import Button from '@vibe/design-system/components/ui/Button'
+import { useLocale } from '@/components/LocaleProvider'
 
 interface EmailAuthModalProps {
   onAuth: (session: UserSession) => void
@@ -30,6 +32,7 @@ function isValidPhone(phone: string): boolean {
 }
 
 export default function EmailAuthModal({ onAuth, onClose }: EmailAuthModalProps) {
+  const { tr } = useLocale()
   const [email, setEmail] = useState('')
   const [phone, setPhone] = useState('')
   const [modalStep, setModalStep] = useState<ModalStep>('email')
@@ -46,7 +49,7 @@ export default function EmailAuthModal({ onAuth, onClose }: EmailAuthModalProps)
     const result = await authenticateEmail(email)
 
     if (!result.success) {
-      setError('오류가 발생했습니다. 다시 시도해주세요.')
+      setError(tr('오류가 발생했습니다. 다시 시도해주세요.', 'Something went wrong. Please try again.'))
       setModalStep('email')
       return
     }
@@ -86,19 +89,23 @@ export default function EmailAuthModal({ onAuth, onClose }: EmailAuthModalProps)
         className="relative w-full max-w-md bg-surface border border-border rounded-xl p-8"
       >
         {onClose && (
-          <button
+          <Button
+            type="button"
+            size="sm"
+            variant="ghost"
             onClick={onClose}
-            className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center text-muted hover:text-white transition-colors rounded-lg hover:bg-white/10"
+            className="absolute top-4 right-4 w-9 min-h-9 px-0"
+            aria-label={tr('닫기', 'Close')}
           >
             ✕
-          </button>
+          </Button>
         )}
         <div className="mb-8">
-          <h2 className="text-2xl font-bold text-white mb-2">이메일로 참전하기</h2>
+          <h2 className="text-2xl font-bold text-white mb-2">{tr('이메일로 참전하기', 'Join with Email')}</h2>
           <p className="text-muted text-sm">
             {modalStep === 'phone'
-              ? '처음 오셨군요! 연락처를 남겨주시면 소식을 드려요.'
-              : '이메일 주소로 전적이 관리됩니다.'}
+              ? tr('처음 오셨군요! 연락처를 남겨주시면 소식을 드려요.', 'Welcome! You may optionally leave a phone number for updates.')
+              : tr('이메일 주소로 전적이 관리됩니다.', 'Your battle record is linked to your email.')}
           </p>
         </div>
 
@@ -112,9 +119,9 @@ export default function EmailAuthModal({ onAuth, onClose }: EmailAuthModalProps)
             >
               <div className="text-5xl mb-4">⚔️</div>
               <div className="text-accent font-bold text-xl mb-2">
-                {isNew ? '참전 등록 완료!' : '돌아오셨군요!'}
+                {isNew ? tr('참전 등록 완료!', 'Registration complete!') : tr('돌아오셨군요!', 'Welcome back!')}
               </div>
-              <div className="text-muted text-sm">배틀 아레나로 입장 중...</div>
+              <div className="text-muted text-sm">{tr('배틀 아레나로 입장 중...', 'Entering the battle arena...')}</div>
             </motion.div>
           ) : modalStep === 'phone' ? (
             <motion.form
@@ -129,7 +136,7 @@ export default function EmailAuthModal({ onAuth, onClose }: EmailAuthModalProps)
               <div className="mb-4">
                 <Input
                   type="tel"
-                  label="PHONE_NUMBER (선택)"
+                  label={tr('PHONE_NUMBER (선택)', 'PHONE NUMBER (OPTIONAL)')}
                   value={phone}
                   onChange={e => setPhone(formatPhone(e.target.value))}
                   placeholder="010-0000-0000"
@@ -137,24 +144,23 @@ export default function EmailAuthModal({ onAuth, onClose }: EmailAuthModalProps)
                   autoFocus
                 />
               </div>
-              <button
+              <Button
                 type="submit"
+                size="lg"
                 disabled={phone.length > 0 && !isValidPhone(phone)}
-                className={`w-full py-4 rounded-lg font-bold text-lg transition-all duration-200 ${
-                  phone.length === 0 || isValidPhone(phone)
-                    ? 'bg-accent text-bg btn-pulse cursor-pointer hover:bg-accent-dim'
-                    : 'bg-border text-muted cursor-not-allowed'
-                }`}
+                className="w-full"
+                pulse={phone.length === 0 || isValidPhone(phone)}
               >
-                ⚔️ 참전 등록
-              </button>
-              <button
+                ⚔️ {tr('참전 등록', 'Complete Registration')}
+              </Button>
+              <Button
                 type="button"
+                variant="ghost"
                 onClick={() => completeLogin('')}
-                className="w-full mt-3 py-2 text-sm text-muted font-mono hover:text-white transition-colors"
+                className="w-full mt-3"
               >
-                건너뛰기 →
-              </button>
+                {tr('건너뛰기', 'Skip')} →
+              </Button>
             </motion.form>
           ) : (
             <motion.form
@@ -178,24 +184,22 @@ export default function EmailAuthModal({ onAuth, onClose }: EmailAuthModalProps)
                   autoFocus
                 />
               </div>
-              <button
+              <Button
                 type="submit"
+                size="lg"
                 disabled={!isValidEmail(email) || modalStep === 'submitting'}
-                className={`w-full py-4 rounded-lg font-bold text-lg transition-all duration-200 ${
-                  isValidEmail(email) && modalStep !== 'submitting'
-                    ? 'bg-accent text-bg btn-pulse cursor-pointer hover:bg-accent-dim'
-                    : 'bg-border text-muted cursor-not-allowed'
-                }`}
+                className="w-full"
+                pulse={isValidEmail(email) && modalStep !== 'submitting'}
               >
                 {modalStep === 'submitting' ? (
                   <span className="flex items-center justify-center gap-2">
                     <span className="w-4 h-4 border-2 border-bg border-t-transparent rounded-full animate-spin" />
-                    확인 중...
+                    {tr('확인 중...', 'Checking...')}
                   </span>
-                ) : '다음 →'}
-              </button>
+                ) : tr('다음 →', 'Continue →')}
+              </Button>
               <p className="mt-4 text-xs text-muted text-center">
-                이메일은 배틀 전적 관리에만 사용됩니다
+                {tr('이메일은 배틀 전적 관리에만 사용됩니다', 'Email is used only to manage your battle record')}
               </p>
             </motion.form>
           )}

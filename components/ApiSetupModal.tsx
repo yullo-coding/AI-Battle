@@ -3,12 +3,16 @@
 import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { saveApiSettings, type ApiMode } from '@/lib/apiSettings'
+import Button from '@vibe/design-system/components/ui/Button'
+import Input from '@vibe/design-system/components/ui/Input'
+import { useLocale } from '@/components/LocaleProvider'
 
 interface ApiSetupModalProps {
   onDone: () => void
 }
 
 export default function ApiSetupModal({ onDone }: ApiSetupModalProps) {
+  const { tr } = useLocale()
   const [mode, setMode] = useState<ApiMode>('own')
   const [apiKey, setApiKey] = useState('')
   const [error, setError] = useState('')
@@ -16,7 +20,7 @@ export default function ApiSetupModal({ onDone }: ApiSetupModalProps) {
   function handleSave() {
     if (mode === 'own') {
       if (!apiKey.startsWith('sk-ant-')) {
-        setError('Anthropic API 키는 sk-ant- 로 시작해야 합니다')
+        setError(tr('Anthropic API 키는 sk-ant- 로 시작해야 합니다.', 'Anthropic API keys must start with sk-ant-.'))
         return
       }
       saveApiSettings({ mode: 'own', apiKey })
@@ -34,8 +38,8 @@ export default function ApiSetupModal({ onDone }: ApiSetupModalProps) {
         className="w-full max-w-md bg-surface border border-border rounded-2xl p-8"
       >
         <div className="mb-6">
-          <h2 className="text-xl font-black text-white mb-1">AI 설정</h2>
-          <p className="text-muted text-sm">어떤 방식으로 AI와 배틀할까요? 나중에 설정에서 변경 가능합니다.</p>
+          <h2 className="text-xl font-black text-white mb-1">{tr('AI 설정', 'AI settings')}</h2>
+          <p className="text-muted text-sm">{tr('어떤 방식으로 AI와 배틀할까요? 나중에 설정에서 변경할 수 있습니다.', 'Choose how to access AI predictions. You can change this later in settings.')}</p>
         </div>
 
         <div className="space-y-3 mb-6">
@@ -52,23 +56,24 @@ export default function ApiSetupModal({ onDone }: ApiSetupModalProps) {
               className="mt-0.5 accent-[#00FF88]"
             />
             <div className="flex-1">
-              <div className="font-bold text-white text-sm">내 Anthropic API 키 사용</div>
-              <div className="text-xs text-muted mt-0.5">무료 · 직접 API 비용 부담</div>
+              <div className="font-bold text-white text-sm">{tr('내 Anthropic API 키 사용', 'Use my Anthropic API key')}</div>
+              <div className="text-xs text-muted mt-0.5">{tr('서비스 이용료 없음 · API 비용은 본인 부담', 'No service fee · API usage billed to you')}</div>
               {mode === 'own' && (
                 <div className="mt-3">
-                  <input
+                  <Input
+                    label={tr('API 키', 'API key')}
                     type="password"
                     value={apiKey}
                     onChange={e => { setApiKey(e.target.value); setError('') }}
                     placeholder="sk-ant-api03-..."
-                    className="w-full bg-bg border border-border rounded-lg px-3 py-2 text-sm font-mono text-white placeholder:text-muted/50 focus:outline-none focus:border-accent transition-colors"
+                    mono
                     autoFocus
                   />
                   <p className="text-xs text-muted mt-1.5">
                     <a href="https://console.anthropic.com" target="_blank" rel="noopener noreferrer" className="text-accent hover:underline">
                       console.anthropic.com
                     </a>
-                    {' '}에서 발급
+                    {' '}{tr('에서 발급', 'to create a key')}
                   </p>
                 </div>
               )}
@@ -88,10 +93,10 @@ export default function ApiSetupModal({ onDone }: ApiSetupModalProps) {
               className="mt-0.5 accent-[#00FF88]"
             />
             <div>
-              <div className="font-bold text-white text-sm">서비스 API 사용</div>
-              <div className="text-xs text-muted mt-0.5">배틀당 소액 결제 · API 키 불필요</div>
+              <div className="font-bold text-white text-sm">{tr('서비스 API 사용', 'Use service API')}</div>
+              <div className="text-xs text-muted mt-0.5">{tr('배틀당 결제 · API 키 불필요', 'Pay per battle · no API key needed')}</div>
               {mode === 'service' && (
-                <div className="mt-2 text-xs text-accent font-mono">결제 기능 준비 중 🚧</div>
+                <div className="mt-2 text-xs text-accent font-mono">{tr('결제 기능 준비 중 🚧', 'Payments coming soon 🚧')}</div>
               )}
             </div>
           </label>
@@ -99,13 +104,14 @@ export default function ApiSetupModal({ onDone }: ApiSetupModalProps) {
 
         {error && <p className="text-xs text-down font-mono mb-4">{error}</p>}
 
-        <button
+        <Button
           onClick={handleSave}
           disabled={mode === 'own' && !apiKey}
-          className="w-full py-3 bg-accent text-bg font-bold rounded-xl hover:bg-accent-dim transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+          size="lg"
+          className="w-full"
         >
-          저장하고 배틀 시작 ⚔️
-        </button>
+          {tr('저장하고 배틀 시작', 'Save and start battle')} ⚔️
+        </Button>
       </motion.div>
     </div>
   )

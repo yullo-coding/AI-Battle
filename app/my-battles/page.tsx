@@ -9,8 +9,11 @@ import type { Battle, UserSession } from '@/lib/types'
 import { parseBattle } from '@/lib/types'
 import BattleResultCard from '@/components/BattleResultCard'
 import EmailAuthModal from '@/components/EmailAuthModal'
+import Button from '@vibe/design-system/components/ui/Button'
+import { useLocale } from '@/components/LocaleProvider'
 
 export default function MyBattlesPage() {
+  const { tr } = useLocale()
   const [session, setSession] = useState<UserSession | null>(null)
   const [showAuth, setShowAuth] = useState(false)
   const [battles, setBattles] = useState<Battle[]>([])
@@ -61,10 +64,10 @@ export default function MyBattlesPage() {
 
       <div className="max-w-lg mx-auto px-6 py-8">
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-          <h1 className="text-2xl font-black text-white mb-1">내 배틀 전적</h1>
+          <h1 className="text-2xl font-black text-white mb-1">{tr('내 배틀 전적', 'My Battle Record')}</h1>
           {session && (
             <p className="text-muted text-sm mb-6">
-              <span className="text-accent font-mono">{session.nickname}</span>님의 전적
+              <span className="text-accent font-mono">{session.nickname}</span>{tr('님의 전적', '’s record')}
             </p>
           )}
         </motion.div>
@@ -72,13 +75,8 @@ export default function MyBattlesPage() {
         {!session ? (
           <div className="text-center py-20 space-y-4">
             <div className="text-5xl">⚔️</div>
-            <p className="text-muted">로그인하면 전적을 확인할 수 있습니다.</p>
-            <button
-              onClick={() => setShowAuth(true)}
-              className="px-6 py-3 bg-accent text-bg font-bold rounded-lg hover:bg-accent-dim transition-colors"
-            >
-              이메일로 로그인
-            </button>
+            <p className="text-muted">{tr('로그인하면 전적을 확인할 수 있습니다.', 'Sign in to view your battle record.')}</p>
+            <Button size="lg" onClick={() => setShowAuth(true)}>{tr('이메일로 로그인', 'Sign in with email')}</Button>
           </div>
         ) : loading ? (
           <div className="flex justify-center py-20">
@@ -87,22 +85,17 @@ export default function MyBattlesPage() {
         ) : battles.length === 0 ? (
           <div className="text-center py-20 space-y-4">
             <div className="text-5xl">🥊</div>
-            <p className="text-muted">아직 참여한 배틀이 없습니다.</p>
-            <Link
-              href="/battle/new"
-              className="inline-block px-6 py-3 bg-accent text-bg font-bold rounded-lg hover:bg-accent-dim transition-colors"
-            >
-              첫 배틀 시작하기 →
-            </Link>
+            <p className="text-muted">{tr('아직 참여한 배틀이 없습니다.', 'You have not joined a battle yet.')}</p>
+            <Link href="/battle/new"><Button size="lg">{tr('첫 배틀 시작하기', 'Start your first battle')} →</Button></Link>
           </div>
         ) : (
           <div className="space-y-6">
             {/* Stats summary */}
             {resolved.length > 0 && (
               <div className="grid grid-cols-3 gap-3">
-                <StatCard label="승" value={wins} color="text-up" />
-                <StatCard label="패" value={losses} color="text-down" />
-                <StatCard label="무" value={ties} color="text-muted" />
+                <StatCard label={tr('승', 'Wins')} value={wins} color="text-up" />
+                <StatCard label={tr('패', 'Losses')} value={losses} color="text-down" />
+                <StatCard label={tr('무', 'Draws')} value={ties} color="text-muted" />
               </div>
             )}
 
@@ -110,10 +103,10 @@ export default function MyBattlesPage() {
             {resolved.length > 0 && (
               <div className="bg-surface border border-border rounded-xl p-4">
                 <div className="flex justify-between text-xs font-mono mb-2">
-                  <span className="text-muted">승률</span>
+                  <span className="text-muted">{tr('승률', 'Win rate')}</span>
                   <span className="text-accent font-bold">
                     {resolved.length > 0 ? Math.round((wins / resolved.length) * 100) : 0}%
-                    <span className="text-muted font-normal ml-1">({resolved.length}전)</span>
+                    <span className="text-muted font-normal ml-1">({resolved.length} {tr('전', 'battles')})</span>
                   </span>
                 </div>
                 <div className="h-2 bg-border rounded-full overflow-hidden flex">

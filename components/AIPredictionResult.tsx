@@ -6,6 +6,7 @@ import Link from 'next/link'
 import type { Battle, AIReasoning } from '@/lib/types'
 import type { AIPrediction } from '@/lib/claude'
 import CountdownTimer from './CountdownTimer'
+import { useLocale } from '@/components/LocaleProvider'
 
 interface AIPredictionResultProps {
   battle: Battle
@@ -49,6 +50,7 @@ function ReasoningSection({ title, content }: { title: string; content: string }
 }
 
 export default function AIPredictionResult({ battle, aiPrediction }: AIPredictionResultProps) {
+  const { tr } = useLocale()
   const [showReasoning, setShowReasoning] = useState(false)
 
   const userPct = battle.user_change_percent ?? 0
@@ -84,15 +86,15 @@ export default function AIPredictionResult({ battle, aiPrediction }: AIPredictio
         className="grid grid-cols-2 gap-3"
       >
         <PredictionBox
-          label="내 예측"
+          label={tr('내 예측', 'My prediction')}
           value={`${userPct > 0 ? '+' : ''}${userPct.toFixed(1)}%`}
           color={userColor as 'up' | 'down' | 'neutral'}
         />
         <PredictionBox
-          label="AI 예측"
+          label={tr('AI 예측', 'AI prediction')}
           value={`${aiPct > 0 ? '+' : ''}${aiPct.toFixed(1)}%`}
           color="ai"
-          badge={`신뢰도 ${aiPrediction.confidence}%`}
+          badge={`${tr('신뢰도', 'Confidence')} ${aiPrediction.confidence}%`}
         />
       </motion.div>
 
@@ -104,7 +106,7 @@ export default function AIPredictionResult({ battle, aiPrediction }: AIPredictio
         className="bg-surface border border-border rounded-xl p-4"
       >
         <div className="flex justify-between text-xs font-mono mb-2">
-          <span className="text-muted">AI 신뢰도</span>
+          <span className="text-muted">{tr('AI 신뢰도', 'AI confidence')}</span>
           <span className="text-[#A78BFA] font-bold">{aiPrediction.confidence}%</span>
         </div>
         <div className="h-2 bg-border rounded-full overflow-hidden">
@@ -129,9 +131,9 @@ export default function AIPredictionResult({ battle, aiPrediction }: AIPredictio
       >
         <button
           onClick={() => setShowReasoning(p => !p)}
-          className="w-full flex items-center justify-between px-5 py-4 text-left hover:bg-white/5 transition-colors"
+          className="w-full flex items-center justify-between px-5 py-4 text-left hover:bg-white/5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent/60"
         >
-          <span className="font-mono text-sm font-bold text-white">{battle.ai_tool_name ?? 'AI 도구'} 상세 분석</span>
+          <span className="font-mono text-sm font-bold text-white">{battle.ai_tool_name ?? tr('AI 도구', 'AI tool')} {tr('상세 분석', 'analysis details')}</span>
           <span className="text-muted text-lg">{showReasoning ? '▲' : '▼'}</span>
         </button>
         <AnimatePresence>
@@ -144,10 +146,10 @@ export default function AIPredictionResult({ battle, aiPrediction }: AIPredictio
               className="overflow-hidden"
             >
               <div className="px-5 pb-5 space-y-4 border-t border-border pt-4">
-                <ReasoningSection title="기술적 지표" content={reasoning.technical} />
-                <ReasoningSection title="시장 심리" content={reasoning.sentiment} />
-                <ReasoningSection title="리스크" content={reasoning.risk} />
-                <ReasoningSection title="종합 결론" content={reasoning.conclusion} />
+                <ReasoningSection title={tr('기술적 지표', 'Technical indicators')} content={reasoning.technical} />
+                <ReasoningSection title={tr('시장 심리', 'Market sentiment')} content={reasoning.sentiment} />
+                <ReasoningSection title={tr('리스크', 'Risks')} content={reasoning.risk} />
+                <ReasoningSection title={tr('종합 결론', 'Conclusion')} content={reasoning.conclusion} />
               </div>
             </motion.div>
           )}
@@ -162,7 +164,7 @@ export default function AIPredictionResult({ battle, aiPrediction }: AIPredictio
         className="bg-surface border border-border rounded-xl p-5"
       >
         <div className="text-xs text-muted font-mono text-center mb-4">
-          결과 확인 날짜: <span className="text-accent">{battle.end_date}</span>
+          {tr('결과 확인 날짜', 'Result date')}: <span className="text-accent">{battle.end_date}</span>
         </div>
         <CountdownTimer endAt={endDatetime} />
       </motion.div>
@@ -178,13 +180,13 @@ export default function AIPredictionResult({ battle, aiPrediction }: AIPredictio
           href={`/battle/${battle.id}`}
           className="w-full py-3 border border-border text-muted rounded-lg text-sm font-mono hover:border-white hover:text-white transition-colors text-center"
         >
-          결과 페이지 바로가기 →
+          {tr('결과 보기', 'View result')} →
         </Link>
         <Link
           href="/my-battles"
           className="w-full py-3 bg-accent text-bg font-bold rounded-lg hover:bg-accent-dim transition-colors text-center"
         >
-          내 배틀 전적 보기
+          {tr('내 배틀 전적 보기', 'View My Battle Record')}
         </Link>
       </motion.div>
     </div>

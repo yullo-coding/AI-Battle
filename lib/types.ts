@@ -40,6 +40,7 @@ export interface AITool {
   pricing: 'free' | 'freemium' | 'paid'
   integration_type: 'built_in' | 'link' | 'api'
   verification_status: 'pending' | 'verified' | 'rejected'
+  api_version: string | null
   is_published: boolean
   is_featured: boolean
   created_at: string

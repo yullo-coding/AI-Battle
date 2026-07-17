@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useLocale } from '@/components/LocaleProvider'
 
 interface CountdownTimerProps {
   endAt: string
@@ -29,6 +30,7 @@ function calcTimeLeft(endAt: string): TimeLeft {
 }
 
 export default function CountdownTimer({ endAt, onEnd, compact = false }: CountdownTimerProps) {
+  const { tr } = useLocale()
   const [time, setTime] = useState<TimeLeft>(calcTimeLeft(endAt))
 
   useEffect(() => {
@@ -44,21 +46,21 @@ export default function CountdownTimer({ endAt, onEnd, compact = false }: Countd
   }, [endAt, onEnd])
 
   if (time.total <= 0) {
-    if (compact) return <span className="text-xs text-muted font-mono">결과 대기 중</span>
+    if (compact) return <span className="text-xs text-accent font-mono">{tr('결과 확인 가능', 'Result ready')}</span>
     return (
       <div className="text-center">
-        <div className="text-2xl font-bold text-white mt-1">결과 집계 중...</div>
+        <div className="text-2xl font-bold text-white mt-1">{tr('결과 확인 가능', 'Result ready')}</div>
       </div>
     )
   }
 
   if (compact) {
     const parts = []
-    if (time.days > 0) parts.push(`${time.days}일`)
+    if (time.days > 0) parts.push(`${time.days}${tr('일', 'd')}`)
     parts.push(`${String(time.hours).padStart(2,'0')}:${String(time.minutes).padStart(2,'0')}:${String(time.seconds).padStart(2,'0')}`)
     return (
       <div>
-        <div className="text-[10px] text-muted font-mono mb-0.5">남은 시간</div>
+        <div className="text-[10px] text-muted font-mono mb-0.5">{tr('남은 시간', 'Time left')}</div>
         <div className="text-sm font-bold font-mono text-accent">{parts.join(' ')}</div>
       </div>
     )
@@ -69,15 +71,15 @@ export default function CountdownTimer({ endAt, onEnd, compact = false }: Countd
       <div className="flex items-center justify-center gap-3">
         {time.days > 0 && (
           <>
-            <TimeUnit value={time.days} label="일" />
+            <TimeUnit value={time.days} label={tr('일', 'DAYS')} />
             <Colon />
           </>
         )}
-        <TimeUnit value={time.hours} label="시" />
+        <TimeUnit value={time.hours} label={tr('시', 'HRS')} />
         <Colon />
-        <TimeUnit value={time.minutes} label="분" />
+        <TimeUnit value={time.minutes} label={tr('분', 'MIN')} />
         <Colon />
-        <TimeUnit value={time.seconds} label="초" />
+        <TimeUnit value={time.seconds} label={tr('초', 'SEC')} />
       </div>
     </div>
   )
