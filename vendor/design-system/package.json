@@ -1,7 +1,12 @@
 {
-  "name": "ai-battle",
+  "name": "@vibe/design-system",
   "version": "0.1.0",
   "private": true,
+  "exports": {
+    "./tailwind.preset": "./tailwind.preset.ts",
+    "./styles/utilities.css": "./styles/utilities.css",
+    "./components/ui/*": "./components/ui/*.tsx"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -9,19 +14,16 @@
     "lint": "next lint"
   },
   "dependencies": {
-    "@vibe/design-system": "file:vendor/design-system",
-    "@anthropic-ai/sdk": "^0.90.0",
-    "@supabase/supabase-js": "^2.103.3",
     "framer-motion": "^12.38.0",
     "next": "14.2.35",
     "react": "^18",
-    "react-dom": "^18",
-    "yahoo-finance2": "^3.14.0"
+    "react-dom": "^18"
   },
   "devDependencies": {
     "@types/node": "^20",
     "@types/react": "^18",
     "@types/react-dom": "^18",
+    "autoprefixer": "^10.0.1",
     "eslint": "^8",
     "eslint-config-next": "14.2.35",
     "postcss": "^8",
