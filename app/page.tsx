@@ -92,11 +92,11 @@ export default function HomePage() {
               </div>
               <div className="grid grid-cols-2 gap-3">
                 {[
-                  { step: '01', icon: '📈', label: '종목 선택', desc: '삼성전자·NVIDIA·Alphabet' },
-                  { step: '02', icon: '📅', label: '날짜 선택', desc: '내일~7일 후 결과 확인일' },
-                  { step: '03', icon: '🔍', label: '지표 분석', desc: 'RSI·MACD·볼린저 대시보드' },
-                  { step: '04', icon: '🎯', label: '등락률 예측', desc: '슬라이더로 % 직접 입력' },
-                  { step: '05', icon: '🤖', label: '도구와 대결', desc: '무료 기본 분석기가 예측 생성' },
+                  { step: '01', icon: '🤖', label: 'AI 서비스 선택', desc: '대결할 투자 분석 도구 선택' },
+                  { step: '02', icon: '📈', label: '종목 선택', desc: '한국·미국 인기 종목 10개' },
+                  { step: '03', icon: '📅', label: '결과일 선택', desc: '다음 10거래일 중 선택' },
+                  { step: '04', icon: '🔍', label: '지표 분석', desc: 'RSI·MACD·볼린저 대시보드' },
+                  { step: '05', icon: '🎯', label: '등락률 예측', desc: '%와 예상 금액을 직접 입력' },
                   { step: '06', icon: '🏆', label: '승부 판정', desc: '더 정확한 예측이 승리!' },
                 ].map((item, i) => (
                   <motion.div

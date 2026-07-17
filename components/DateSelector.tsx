@@ -9,15 +9,18 @@ interface DateSelectorProps {
   onBack: () => void
 }
 
-function getSelectableDates(): Array<{ date: string; label: string; dayName: string; isWeekend: boolean }> {
-  const results = []
+function getSelectableDates(): Array<{ date: string; label: string; dayName: string }> {
+  const results: Array<{ date: string; label: string; dayName: string }> = []
   const today = new Date()
   const dayNames = ['일', '월', '화', '수', '목', '금', '토']
 
-  for (let i = 1; i <= 7; i++) {
+  // 오늘 이후 주말을 제외한 10일을 보여준다. 거래소 휴장일은 결과 확정 시
+  // 다음 거래일 종가로 자동 보정한다.
+  for (let i = 1; results.length < 10; i++) {
     const d = new Date(today)
     d.setDate(today.getDate() + i)
     const isWeekend = d.getDay() === 0 || d.getDay() === 6
+    if (isWeekend) continue
     const yyyy = d.getFullYear()
     const mm = String(d.getMonth() + 1).padStart(2, '0')
     const dd = String(d.getDate()).padStart(2, '0')
@@ -26,7 +29,6 @@ function getSelectableDates(): Array<{ date: string; label: string; dayName: str
       date: `${yyyy}-${mm}-${dd}`,
       label: `${month}/${d.getDate()}`,
       dayName: dayNames[d.getDay()],
-      isWeekend,
     })
   }
   return results
@@ -38,36 +40,36 @@ export default function DateSelector({ symbol, onSelect, onBack }: DateSelectorP
 
   return (
     <div className="space-y-6">
-      <div className="tag text-accent mb-2">날짜 선택</div>
+      <div className="text-xs font-mono text-accent mb-2">결과 확인일 선택</div>
       <div className="flex items-center gap-2 mb-6">
         <span>{stock?.market === 'KR' ? '🇰🇷' : '🇺🇸'}</span>
         <span className="text-white font-bold">{stock?.name}</span>
         <span className="text-muted text-xs font-mono">{symbol}</span>
       </div>
 
-      <p className="text-muted text-sm">결과를 확인할 날짜를 선택하세요. (주말은 다음 영업일 기준)</p>
+      <div className="rounded-xl border border-border bg-surface p-4">
+        <div className="flex items-center justify-between gap-3 text-sm">
+          <span className="text-muted">배틀 시작일</span>
+          <strong className="text-white">오늘</strong>
+        </div>
+        <div className="h-px bg-border my-3" />
+        <p className="text-muted text-xs leading-relaxed">
+          주말을 제외한 다음 10거래일 중 결과를 확인할 날짜를 고르세요. 공휴일이면 다음 거래일 종가로 판정합니다.
+        </p>
+      </div>
 
-      <div className="grid grid-cols-7 gap-2">
+      <div className="grid grid-cols-5 gap-2">
         {dates.map((d, i) => (
           <motion.button
             key={d.date}
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: i * 0.05 }}
-            onClick={() => !d.isWeekend && onSelect(d.date)}
-            disabled={d.isWeekend}
-            className={`flex flex-col items-center py-3 px-1 rounded-xl border transition-all duration-200 ${
-              d.isWeekend
-                ? 'border-border bg-surface opacity-30 cursor-not-allowed'
-                : 'border-border bg-surface hover:border-accent hover:bg-accent/5 cursor-pointer'
-            }`}
+            onClick={() => onSelect(d.date)}
+            className="flex flex-col items-center py-3 px-1 rounded-xl border border-border bg-surface hover:border-accent hover:bg-accent/5 transition-all duration-200 cursor-pointer"
           >
-            <span className={`text-xs font-mono mb-1 ${d.isWeekend ? 'text-muted' : 'text-muted'}`}>
-              {d.dayName}
-            </span>
-            <span className={`font-bold text-sm ${d.isWeekend ? 'text-muted' : 'text-white'}`}>
-              {d.label}
-            </span>
+            <span className="text-xs font-mono mb-1 text-muted">{d.dayName}</span>
+            <span className="font-bold text-sm text-white">{d.label}</span>
           </motion.button>
         ))}
       </div>

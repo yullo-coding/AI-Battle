@@ -18,7 +18,7 @@ import AIToolSelector from '@/components/AIToolSelector'
 import { DEFAULT_AI_TOOL, DEFAULT_TOOL_ID, fetchAITools } from '@/lib/aiTools'
 import type { AITool } from '@/lib/types'
 
-type Step = 1 | 2 | 3 | 4 | 5
+type Step = 1 | 2 | 3 | 4 | 5 | 6
 
 const AI_STEPS = [
   { label: '데이터 수집 중', detail: 'Yahoo Finance API 호출...' },
@@ -55,14 +55,14 @@ export default function NewBattlePage() {
 
   useEffect(() => {
     fetchAITools()
-      .then(tools => setAiTools(tools.filter(tool => tool.integration_type === 'built_in')))
+      .then(setAiTools)
       .catch(() => setAiTools([]))
   }, [])
 
-  // Step 1 → 2: 종목 선택 즉시 백그라운드 fetch 시작
+  // Step 2 → 3: 종목 선택 즉시 분석 데이터를 미리 불러온다.
   function handleSelectStock(s: string) {
     setSymbol(s)
-    setStep(2)
+    setStep(3)
     setAnalysis(null)
     setAnalysisError('')
     setAnalysisLoading(true)
@@ -72,10 +72,10 @@ export default function NewBattlePage() {
       .catch(() => { setAnalysisError('주가 데이터를 불러오지 못했습니다. 다시 시도해주세요.'); setAnalysisLoading(false) })
   }
 
-  // Step 2 → 3: Step 3 진입 시 최신 데이터로 재fetch
+  // Step 3 → 4: 결과일 선택 시 최신 분석 데이터로 한 번 더 갱신한다.
   function handleSelectDate(date: string) {
     setEndDate(date)
-    setStep(3)
+    setStep(4)
     setAnalysisLoading(true)
     setAnalysisError('')
     fetch(`/api/stocks/${encodeURIComponent(symbol)}`)
@@ -95,7 +95,7 @@ export default function NewBattlePage() {
   async function submitBattle(email: string) {
     setSubmitting(true)
     setSubmitError('')
-    setStep(4)
+    setStep(5)
     setAiStep(0)
 
     const stepTimer1 = setTimeout(() => setAiStep(1), 1200)
@@ -125,12 +125,12 @@ export default function NewBattlePage() {
 
       setBattle(data.battle)
       setAiPrediction(data.aiPrediction)
-      setStep(5)
+      setStep(6)
     } catch (err: unknown) {
       clearTimeout(stepTimer1)
       clearTimeout(stepTimer2)
       setSubmitError(err instanceof Error ? err.message : String(err))
-      setStep(3)
+      setStep(4)
     }
     setSubmitting(false)
   }
@@ -154,44 +154,51 @@ export default function NewBattlePage() {
 
       <AnimatePresence mode="wait">
 
-        {/* STEP 1 — 종목 선택 */}
+        {/* STEP 1 — AI 투자 서비스 선택 */}
         {step === 1 && (
-          <motion.div key="step1" {...fadeSlide} className="max-w-lg mx-auto px-6 py-8">
-            <StockSelector onSelect={handleSelectStock} />
-          </motion.div>
-        )}
-
-        {/* STEP 2 — 날짜 선택 */}
-        {step === 2 && (
-          <motion.div key="step2" {...fadeSlide} className="max-w-lg mx-auto px-6 py-8">
-            <DateSelector
-              symbol={symbol}
-              onSelect={handleSelectDate}
-              onBack={() => setStep(1)}
+          <motion.div key="step1" {...fadeSlide} className="max-w-3xl mx-auto px-6 py-8">
+            <AIToolSelector
+              tools={aiTools.length ? aiTools : [DEFAULT_AI_TOOL]}
+              value={selectedToolId}
+              onChange={setSelectedToolId}
+              onContinue={() => setStep(2)}
             />
           </motion.div>
         )}
 
-        {/* STEP 3 — 분석 + 예측 입력 (통합) */}
+        {/* STEP 2 — 종목 선택 */}
+        {step === 2 && (
+          <motion.div key="step2" {...fadeSlide} className="max-w-3xl mx-auto px-6 py-8">
+            <StockSelector onSelect={handleSelectStock} onBack={() => setStep(1)} />
+          </motion.div>
+        )}
+
+        {/* STEP 3 — 결과 확인일 선택 */}
         {step === 3 && (
-          <motion.div key="step3" {...fadeSlide}>
+          <motion.div key="step3" {...fadeSlide} className="max-w-2xl mx-auto px-6 py-8">
+            <DateSelector
+              symbol={symbol}
+              onSelect={handleSelectDate}
+              onBack={() => setStep(2)}
+            />
+          </motion.div>
+        )}
+
+        {/* STEP 4 — 분석 + 예측 입력 (통합) */}
+        {step === 4 && (
+          <motion.div key="step4" {...fadeSlide}>
             {analysisLoading ? (
               <div className="max-w-lg mx-auto px-6 py-8">
                 <AnalysisLoader />
               </div>
             ) : analysisError ? (
               <div className="max-w-lg mx-auto px-6 py-8">
-                <ErrorState message={analysisError} onRetry={() => handleSelectStock(symbol)} />
+                <ErrorState message={analysisError} onRetry={() => handleSelectDate(endDate)} />
               </div>
             ) : analysis ? (
               <>
                 {/* 분석 정보 스크롤 영역 */}
                 <div className="max-w-lg mx-auto px-6 py-6 pb-24">
-                  <AIToolSelector
-                    tools={aiTools.length ? aiTools : [DEFAULT_AI_TOOL]}
-                    value={selectedToolId}
-                    onChange={setSelectedToolId}
-                  />
                   <StockInfoPanel analysis={analysis} endDate={endDate} />
                 </div>
 
@@ -256,7 +263,7 @@ export default function NewBattlePage() {
                             )}
                             <div className="flex gap-2">
                               <button
-                                onClick={() => setStep(2)}
+                                onClick={() => setStep(3)}
                                 className="px-4 py-2.5 border border-border text-muted rounded-xl text-xs font-mono hover:border-white hover:text-white transition-colors"
                               >
                                 ← 날짜
@@ -283,16 +290,16 @@ export default function NewBattlePage() {
           </motion.div>
         )}
 
-        {/* STEP 4 — AI 로딩 */}
-        {step === 4 && (
-          <motion.div key="step4" {...fadeSlide} className="max-w-lg mx-auto px-6 py-8">
+        {/* STEP 5 — AI 로딩 */}
+        {step === 5 && (
+          <motion.div key="step5" {...fadeSlide} className="max-w-lg mx-auto px-6 py-8">
             <AILoadingScreen aiStep={aiStep} />
           </motion.div>
         )}
 
-        {/* STEP 5 — 결과 */}
-        {step === 5 && battle && aiPrediction && (
-          <motion.div key="step5" {...fadeSlide} className="max-w-lg mx-auto px-6 py-8">
+        {/* STEP 6 — 결과 */}
+        {step === 6 && battle && aiPrediction && (
+          <motion.div key="step6" {...fadeSlide} className="max-w-lg mx-auto px-6 py-8">
             <AIPredictionResult battle={battle} aiPrediction={aiPrediction} />
           </motion.div>
         )}
@@ -314,7 +321,7 @@ const fadeSlide = {
 function StepIndicator({ step }: { step: Step }) {
   return (
     <div className="flex items-center gap-1.5">
-      {([1, 2, 3, 4, 5] as Step[]).map(s => (
+      {([1, 2, 3, 4, 5, 6] as Step[]).map(s => (
         <div
           key={s}
           className={`h-1.5 rounded-full transition-all duration-300 ${

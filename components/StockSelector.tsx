@@ -6,6 +6,7 @@ import { CURATED_STOCKS, formatPrice, formatChange } from '@/lib/stocks'
 
 interface StockSelectorProps {
   onSelect: (symbol: string) => void
+  onBack?: () => void
 }
 
 interface LiveQuote {
@@ -13,26 +14,19 @@ interface LiveQuote {
   changePercent: number
 }
 
-export default function StockSelector({ onSelect }: StockSelectorProps) {
+export default function StockSelector({ onSelect, onBack }: StockSelectorProps) {
   const [quotes, setQuotes] = useState<Record<string, LiveQuote>>({})
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     async function load() {
       try {
-        const results = await Promise.allSettled(
-          CURATED_STOCKS.map(s =>
-            fetch(`/api/stocks/${s.symbol}`).then(r => r.json())
-          )
-        )
+        const response = await fetch('/api/stocks')
+        if (!response.ok) throw new Error('시세 조회 실패')
+        const results = await response.json() as Array<{ symbol: string; price: number; changePercent: number }>
         const map: Record<string, LiveQuote> = {}
-        results.forEach((r, i) => {
-          if (r.status === 'fulfilled' && r.value?.quote) {
-            map[CURATED_STOCKS[i].symbol] = {
-              price: r.value.quote.price,
-              changePercent: r.value.quote.changePercent,
-            }
-          }
+        results.forEach(q => {
+          map[q.symbol] = { price: q.price, changePercent: q.changePercent }
         })
         setQuotes(map)
       } catch { /* ignore */ }
@@ -43,9 +37,12 @@ export default function StockSelector({ onSelect }: StockSelectorProps) {
 
   return (
     <div className="space-y-4">
-      <div className="tag text-accent mb-6">종목 선택</div>
-      <p className="text-muted text-sm mb-6">AI와 배틀할 종목을 선택하세요.</p>
-      <div className="grid grid-cols-1 gap-4">
+      <div>
+        <div className="text-xs font-mono text-accent mb-2">종목 선택</div>
+        <h1 className="text-2xl font-black text-white">어떤 종목을 예측할까요?</h1>
+        <p className="text-muted text-sm mt-2">한국과 미국의 인기 종목 10개 중 하나를 선택하세요.</p>
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         {CURATED_STOCKS.map((stock, i) => {
           const q = quotes[stock.symbol]
           const isUp = (q?.changePercent ?? 0) >= 0
@@ -56,13 +53,13 @@ export default function StockSelector({ onSelect }: StockSelectorProps) {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: i * 0.08 }}
               onClick={() => onSelect(stock.symbol)}
-              className="w-full bg-surface border border-border rounded-xl p-5 text-left hover:border-accent transition-all duration-200 cursor-pointer group"
+              className="w-full bg-surface border border-border rounded-xl p-4 text-left hover:border-accent transition-all duration-200 cursor-pointer group"
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <span className="text-2xl">{stock.market === 'KR' ? '🇰🇷' : '🇺🇸'}</span>
                   <div>
-                    <div className="font-bold text-white text-lg group-hover:text-accent transition-colors">
+                    <div className="font-bold text-white group-hover:text-accent transition-colors">
                       {stock.name}
                     </div>
                     <div className="text-muted text-xs font-mono">{stock.symbol}</div>
@@ -89,6 +86,11 @@ export default function StockSelector({ onSelect }: StockSelectorProps) {
           )
         })}
       </div>
+      {onBack && (
+        <button onClick={onBack} className="text-muted text-sm font-mono hover:text-white transition-colors">
+          ← AI 투자 서비스 다시 선택
+        </button>
+      )}
     </div>
   )
 }

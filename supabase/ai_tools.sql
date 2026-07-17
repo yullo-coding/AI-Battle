@@ -75,6 +75,61 @@ INSERT INTO ai_tools (
   description = EXCLUDED.description,
   updated_at = now();
 
+-- 공식 사이트에서 확인한 외부 AI 투자 서비스 큐레이션.
+-- 아직 AI Battle이 결과를 직접 호출하지 않으므로 링크·리뷰 전용(pending)으로 공개한다.
+INSERT INTO ai_tools (
+  id, owner_email, name, tagline, description, website_url,
+  supported_markets, pricing, integration_type, verification_status,
+  is_published, is_featured
+) VALUES
+(
+  '00000000-0000-4000-8000-000000000101',
+  'curation@ai-battle.local',
+  'Composer',
+  '자연어로 투자 전략을 만들고 백테스트와 자동 실행까지 연결하는 서비스',
+  '목표와 위험 조건을 자연어로 설명하면 AI가 규칙 기반 투자 전략을 구성합니다. 전략 백테스트, 커뮤니티 공유, 자동 리밸런싱을 지원하는 미국 중심 서비스입니다.',
+  'https://www.composer.trade/',
+  ARRAY['US'], 'paid', 'link', 'pending', true, false
+),
+(
+  '00000000-0000-4000-8000-000000000102',
+  'curation@ai-battle.local',
+  'TrendSpider AI Strategy Lab',
+  '머신러닝 모델을 직접 훈련하고 백테스트·알림·봇으로 연결하는 분석 도구',
+  'Random Forest, KNN 등 예측 모델을 코딩 없이 훈련하고 차트, 스캐너, 백테스트와 자동화 봇에 적용할 수 있습니다. 미국 주식과 ETF, 선물, 암호화폐, 외환 등을 지원합니다.',
+  'https://trendspider.com/product/artificial-intelligence-ai-trading-strategy-lab/',
+  ARRAY['US','Crypto','FX'], 'paid', 'link', 'pending', true, false
+),
+(
+  '00000000-0000-4000-8000-000000000103',
+  'curation@ai-battle.local',
+  'Danelfin',
+  '기술·펀더멘털·심리 데이터를 종합한 AI 점수로 종목을 비교하는 서비스',
+  '미국과 유럽 주식 및 ETF를 AI 점수로 비교합니다. 기술적 지표, 기업 기초체력, 시장 심리와 위험도를 함께 보여주며 중기 투자 아이디어 탐색에 적합합니다.',
+  'https://danelfin.com/',
+  ARRAY['US','EU'], 'freemium', 'link', 'pending', true, false
+),
+(
+  '00000000-0000-4000-8000-000000000104',
+  'curation@ai-battle.local',
+  'Capitalise.ai',
+  '일상 언어로 매매 조건을 작성해 백테스트와 자동 실행을 만드는 노코드 도구',
+  '코딩 없이 평범한 문장으로 진입·청산 조건을 만들고 과거 데이터 백테스트, 모의 거래, 실시간 알림과 자동 실행을 설정할 수 있습니다. 이용 가능 시장은 연결한 파트너에 따라 달라집니다.',
+  'https://capitalise.ai/',
+  ARRAY['Global'], 'freemium', 'link', 'pending', true, false
+)
+ON CONFLICT (id) DO UPDATE SET
+  name = EXCLUDED.name,
+  tagline = EXCLUDED.tagline,
+  description = EXCLUDED.description,
+  website_url = EXCLUDED.website_url,
+  supported_markets = EXCLUDED.supported_markets,
+  pricing = EXCLUDED.pricing,
+  integration_type = EXCLUDED.integration_type,
+  verification_status = EXCLUDED.verification_status,
+  is_published = EXCLUDED.is_published,
+  updated_at = now();
+
 ALTER TABLE battles ADD COLUMN IF NOT EXISTS ai_tool_id UUID REFERENCES ai_tools(id) ON DELETE SET NULL;
 ALTER TABLE battles ADD COLUMN IF NOT EXISTS ai_tool_name TEXT;
 
