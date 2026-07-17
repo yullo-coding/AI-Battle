@@ -11,28 +11,32 @@ import type { UserSession } from '@/lib/types'
 import EmailAuthModal from '@/components/EmailAuthModal'
 import { useLocale } from '@/components/LocaleProvider'
 
-type RegistrationMode = 'link' | 'api'
 const MARKET_OPTIONS = ['US', 'KR', 'EU', 'Crypto', 'FX', 'Global'] as const
 
 export default function NewToolPage() {
   const { locale, tr } = useLocale()
   const router = useRouter()
   const [session, setSession] = useState<UserSession | null>(null)
+  const [sessionReady, setSessionReady] = useState(false)
   const [showAuth, setShowAuth] = useState(false)
   const [name, setName] = useState('')
   const [tagline, setTagline] = useState('')
   const [description, setDescription] = useState('')
   const [websiteUrl, setWebsiteUrl] = useState('')
   const [pricing, setPricing] = useState<'free' | 'freemium' | 'paid'>('free')
-  const [mode, setMode] = useState<RegistrationMode>('link')
+  const [connectBattleApi, setConnectBattleApi] = useState(false)
   const [supportedMarkets, setSupportedMarkets] = useState<string[]>(['US', 'KR'])
   const [endpointUrl, setEndpointUrl] = useState('')
   const [authToken, setAuthToken] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [status, setStatus] = useState('')
   const [error, setError] = useState('')
+  const mode = connectBattleApi ? 'api' : 'link'
 
-  useEffect(() => setSession(loadSession()), [])
+  useEffect(() => {
+    setSession(loadSession())
+    setSessionReady(true)
+  }, [])
 
   function toggleMarket(market: string) {
     setSupportedMarkets(current => current.includes(market)
@@ -58,7 +62,7 @@ export default function NewToolPage() {
           description,
           websiteUrl,
           pricing,
-          mode,
+          connectBattleApi,
           supportedMarkets,
           endpointUrl,
           authToken,
@@ -76,21 +80,58 @@ export default function NewToolPage() {
     }
   }
 
+  if (!sessionReady) {
+    return (
+      <main className="min-h-screen bg-bg flex items-center justify-center">
+        <div className="h-10 w-10 rounded-full border-2 border-accent border-t-transparent animate-spin" />
+      </main>
+    )
+  }
+
+  if (!session) {
+    return (
+      <main className="min-h-screen bg-bg">
+        {showAuth && <EmailAuthModal onAuth={s => { setSession(s); setShowAuth(false) }} onClose={() => setShowAuth(false)} />}
+        <section className="max-w-lg mx-auto px-6 py-16 sm:py-24">
+          <Card className="p-7 sm:p-8 text-center">
+            <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-2xl border border-[#A78BFA]/40 bg-[#A78BFA]/10 text-2xl">AI</div>
+            <p className="text-xs font-mono text-[#C4B5FD] mb-2">{tr('제작자 시작하기', 'Builder sign-in')}</p>
+            <h1 className="text-2xl sm:text-3xl font-black text-white mb-3">{tr('로그인하고 내 도구를 등록하세요', 'Sign in to submit your tool')}</h1>
+            <p className="text-sm text-muted leading-relaxed mb-7">
+              {tr('도구의 제작자 정보와 등록 내역을 로그인 계정에 안전하게 연결합니다.', 'Your signed-in account is securely linked to the tool and its submission record.')}
+            </p>
+            <div className="grid grid-cols-3 gap-2 mb-7 text-xs">
+              <div className="rounded-xl border border-border bg-surface-2 p-3 text-muted"><strong className="block text-white mb-1">01</strong>{tr('도구 등록', 'Submit')}</div>
+              <div className="rounded-xl border border-border bg-surface-2 p-3 text-muted"><strong className="block text-white mb-1">02</strong>{tr('리뷰 받기', 'Reviews')}</div>
+              <div className="rounded-xl border border-border bg-surface-2 p-3 text-muted"><strong className="block text-white mb-1">03</strong>{tr('API 선택 연결', 'Optional API')}</div>
+            </div>
+            <Button size="lg" className="w-full" onClick={() => setShowAuth(true)}>{tr('이메일로 제작자 로그인', 'Builder sign-in with email')} →</Button>
+          </Card>
+        </section>
+      </main>
+    )
+  }
+
   return (
     <main className="min-h-screen bg-bg">
       {showAuth && <EmailAuthModal onAuth={s => { setSession(s); setShowAuth(false) }} onClose={() => setShowAuth(false)} />}
       <section className="max-w-3xl mx-auto px-6 py-12">
         <div className="mb-8">
           <p className="text-accent font-mono text-sm mb-2">{tr('제작자 등록', 'Builder Submission')}</p>
-          <h1 className="text-3xl font-black text-white mb-3">{tr('내 AI 투자 도구 연결하기', 'Connect Your AI Investing Tool')}</h1>
-          <p className="text-muted">{tr('링크만 공개하거나, 예측 API를 연결해 사용자가 AI Battle 안에서 바로 대결하게 할 수 있습니다.', 'Publish a review listing, or connect a prediction API so users can battle your AI without leaving AI Battle.')}</p>
+          <h1 className="text-3xl font-black text-white mb-3">{tr('내 AI 투자 도구 등록하기', 'Submit Your AI Investing Tool')}</h1>
+          <p className="text-muted">{tr('도구를 먼저 등록하고, 사용자가 바로 대결할 수 있게 하려면 배틀 API를 선택적으로 연결하세요.', 'Submit your tool first, then optionally connect a Battle API so users can battle it inside AI Battle.')}</p>
         </div>
 
-        <Card className="mb-5">
-          <h2 className="text-lg font-black text-white mb-4">{tr('등록 방식', 'Submission type')}</h2>
-          <div className="grid sm:grid-cols-2 gap-3">
-            <ModeCard selected={mode === 'link'} title={tr('링크·리뷰 등록', 'Review listing')} description={tr('소개 페이지와 사용자 리뷰부터 공개합니다.', 'Publish a profile and collect user reviews first.')} badge={tr('API 불필요', 'No API')} onClick={() => setMode('link')} />
-            <ModeCard selected={mode === 'api'} title={tr('배틀 API 연결', 'Connect Battle API')} description={tr('내 AI가 예측하고 승패·전적은 AI Battle에서 관리합니다.', 'Your AI predicts while AI Battle manages results and records.')} badge={tr('바로 배틀 가능', 'Battle ready')} onClick={() => setMode('api')} />
+        <Card className="mb-5 p-4 sm:p-5">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-accent/10 text-sm font-black text-accent">
+              {session.nickname.slice(0, 1).toUpperCase()}
+            </div>
+            <div className="min-w-0">
+              <div className="text-xs text-muted">{tr('등록 계정', 'Submitting as')}</div>
+              <div className="font-bold text-white truncate">{session.nickname}</div>
+              <div className="text-xs text-muted font-mono truncate">{session.email}</div>
+            </div>
           </div>
         </Card>
 
@@ -114,7 +155,31 @@ export default function NewToolPage() {
               </div>
             </div>
 
-            {mode === 'api' && (
+            <div className={`rounded-xl border p-5 transition-colors ${connectBattleApi ? 'border-accent/50 bg-accent/[0.05]' : 'border-border bg-surface-2'}`}>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                  <div className="flex flex-wrap items-center gap-2 mb-1">
+                    <h2 className="text-lg font-black text-white">{tr('배틀 API 연결', 'Connect Battle API')}</h2>
+                    <span className="rounded-full border border-border px-2 py-0.5 text-[10px] text-muted">{tr('선택', 'Optional')}</span>
+                  </div>
+                  <p className="text-sm text-muted leading-relaxed">
+                    {tr('연결하면 사용자가 AI Battle 안에서 내 도구와 직접 대결할 수 있습니다.', 'Connect it so users can battle your tool directly inside AI Battle.')}
+                  </p>
+                </div>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={connectBattleApi ? 'primary' : 'secondary'}
+                  aria-pressed={connectBattleApi}
+                  onClick={() => setConnectBattleApi(value => !value)}
+                  className="shrink-0"
+                >
+                  {connectBattleApi ? tr('연결 선택됨 ✓', 'Selected ✓') : tr('연결하기 +', 'Connect +')}
+                </Button>
+              </div>
+            </div>
+
+            {connectBattleApi && (
               <div className="space-y-5 rounded-xl border border-accent/40 bg-accent/[0.04] p-5">
                 <div>
                   <h2 className="text-lg font-black text-white">{tr('예측 API 연결', 'Prediction API')}</h2>
@@ -136,33 +201,21 @@ export default function NewToolPage() {
             )}
 
             <div className="p-4 rounded-xl border border-border bg-white/[0.03] text-xs text-muted leading-relaxed">
-              {mode === 'api'
+              {connectBattleApi
                 ? tr('연결 테스트를 통과한 도구는 AI 서비스 선택 화면에 즉시 나타납니다. API 토큰은 공개 목록이 아닌 서버 전용 공간에 보관됩니다.', 'Verified tools appear in the AI selection screen immediately. API tokens are stored server-side and never exposed in the public directory.')
-                : tr('등록 후 링크·리뷰 전용으로 바로 공개됩니다. 나중에 제작자 API를 연결하면 배틀 도구로 전환할 수 있습니다.', 'Your review listing goes live immediately. You can connect a prediction API later to enable battles.')}
+                : tr('배틀 API 없이도 도구 소개와 리뷰 페이지는 바로 공개됩니다. 배틀 기능만 비활성 상태로 등록됩니다.', 'Your tool profile and reviews go live without a Battle API. Only battle participation remains disabled.')}
             </div>
             {status && <p className="text-accent text-sm">{status}</p>}
             {error && <p className="text-danger text-sm">{error}</p>}
             <Button type="submit" size="lg" className="w-full" disabled={submitting || supportedMarkets.length === 0}>
               {submitting
-                ? (mode === 'api' ? tr('API 연결 테스트 중...', 'Testing API connection...') : tr('등록 중...', 'Submitting...'))
-                : (mode === 'api' ? tr('연결 테스트 후 배틀 도구 등록', 'Test & Submit Battle Tool') : tr('링크·리뷰 도구 등록', 'Submit Review Listing'))}
+                ? (connectBattleApi ? tr('API 연결 테스트 중...', 'Testing API connection...') : tr('등록 중...', 'Submitting...'))
+                : (connectBattleApi ? tr('API 테스트하고 도구 등록', 'Test API & Submit Tool') : tr('AI 투자 도구 등록', 'Submit AI Investing Tool'))}
             </Button>
           </form>
         </Card>
       </section>
     </main>
-  )
-}
-
-function ModeCard({ selected, title, description, badge, onClick }: { selected: boolean; title: string; description: string; badge: string; onClick: () => void }) {
-  return (
-    <button type="button" onClick={onClick} className={`w-full rounded-xl border p-4 text-left transition-colors ${selected ? 'border-accent bg-accent/[0.08]' : 'border-border bg-surface-2 hover:border-white/60'}`}>
-      <div className="flex items-center justify-between gap-3 mb-2">
-        <strong className={selected ? 'text-accent' : 'text-white'}>{title}</strong>
-        <span className="text-[10px] font-mono text-muted">{badge}</span>
-      </div>
-      <p className="text-xs leading-relaxed text-muted">{description}</p>
-    </button>
   )
 }
 

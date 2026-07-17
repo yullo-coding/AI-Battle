@@ -28,7 +28,8 @@ export async function POST(req: NextRequest) {
     const description = text(body.description, 2000)
     const websiteUrl = httpsUrl(text(body.websiteUrl, 500), '웹사이트')
     const pricing = text(body.pricing, 20)
-    const mode = body.mode === 'api' ? 'api' : 'link'
+    const connectBattleApi = body.connectBattleApi === true
+    const mode = connectBattleApi ? 'api' : 'link'
     const supportedMarkets = Array.isArray(body.supportedMarkets)
       ? Array.from(new Set(body.supportedMarkets.map(value => text(value, 20)).filter(value => MARKETS.has(value)))).slice(0, 6)
       : []

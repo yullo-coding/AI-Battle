@@ -13,13 +13,24 @@ import EmailAuthModal from '@/components/EmailAuthModal'
 import Button from '@vibe/design-system/components/ui/Button'
 import { useLocale } from '@/components/LocaleProvider'
 
+interface GlobalStats {
+  humanWins: number
+  aiWins: number
+  ties: number
+  participants: number
+  totalBattles: number
+  topStockName: string
+  topStockSymbol: string
+  topStockCount: number
+}
+
 export default function HomePage() {
   const { tr } = useLocale()
   const [session, setSession] = useState<UserSession | null>(null)
   const [showAuth, setShowAuth] = useState(false)
   const [battles, setBattles] = useState<Battle[]>([])
   const [loading, setLoading] = useState(false)
-  const [globalStats, setGlobalStats] = useState<{ humanWins: number; aiWins: number } | null>(null)
+  const [globalStats, setGlobalStats] = useState<GlobalStats | null>(null)
 
   useEffect(() => {
     const s = loadSession()
@@ -47,12 +58,26 @@ export default function HomePage() {
     if (!sb) return
     const { data } = await sb
       .from('battles')
-      .select('winner')
-      .eq('status', 'resolved')
+      .select('email,winner,status,stock_symbol,stock_name')
     if (!data) return
+
+    const resolvedRows = data.filter(row => row.status === 'resolved')
+    const stockCounts = new Map<string, { name: string; count: number }>()
+    data.forEach(row => {
+      const current = stockCounts.get(row.stock_symbol) ?? { name: row.stock_name, count: 0 }
+      stockCounts.set(row.stock_symbol, { ...current, count: current.count + 1 })
+    })
+    const topStock = Array.from(stockCounts.entries()).sort((a, b) => b[1].count - a[1].count)[0]
+
     setGlobalStats({
-      humanWins: data.filter(r => r.winner === 'USER').length,
-      aiWins: data.filter(r => r.winner === 'AI').length,
+      humanWins: resolvedRows.filter(row => row.winner === 'USER').length,
+      aiWins: resolvedRows.filter(row => row.winner === 'AI').length,
+      ties: resolvedRows.filter(row => row.winner === 'TIE').length,
+      participants: new Set(data.map(row => row.email)).size,
+      totalBattles: data.length,
+      topStockName: topStock?.[1].name ?? '-',
+      topStockSymbol: topStock?.[0] ?? '',
+      topStockCount: topStock?.[1].count ?? 0,
     })
   }
 
@@ -182,25 +207,56 @@ export default function HomePage() {
             </motion.div>
 
             {/* 전체 인간 vs AI 통계 */}
-            {globalStats && (globalStats.humanWins + globalStats.aiWins) > 0 && (
+            {globalStats && globalStats.totalBattles > 0 && (
               <motion.div
                 initial={{ opacity: 0, y: 16 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
-                className="border border-border rounded-xl p-5 bg-surface"
+                className="border border-border rounded-2xl p-5 sm:p-6 bg-surface"
               >
-                <div className="text-xs font-mono text-muted mb-3 text-center">{tr('전체 인간 vs AI 전적', 'Overall Human vs AI Record')}</div>
-                <div className="flex justify-between text-sm font-mono mb-2">
-                  <span className="text-human font-bold">{tr('인간', 'Human')} {globalStats.humanWins}{tr('승', ' wins')}</span>
-                  <span className="text-[#A78BFA] font-bold">AI {globalStats.aiWins}{tr('승', ' wins')}</span>
+                <div className="flex items-center justify-between gap-3 mb-5">
+                  <div>
+                    <div className="text-xs font-mono text-accent mb-1">{tr('전체 인간 vs AI 전적', 'Overall Human vs AI Record')}</div>
+                    <div className="text-lg font-black text-white">{tr('누가 더 정확했을까요?', 'Who has been more accurate?')}</div>
+                  </div>
+                  <Link href="/leaderboard" className="text-xs text-muted hover:text-accent transition-colors shrink-0">
+                    {tr('전적·랭킹 상세', 'Records & ranking')} →
+                  </Link>
                 </div>
-                <div className="h-2 bg-border rounded-full overflow-hidden flex">
-                  <div
-                    className="bg-human h-full rounded-full transition-all"
-                    style={{ width: `${(globalStats.humanWins / (globalStats.humanWins + globalStats.aiWins)) * 100}%` }}
-                  />
-                  <div className="bg-[#A78BFA] h-full flex-1" />
+
+                <div className="grid grid-cols-3 gap-2 mb-5">
+                  <div className="rounded-xl border border-border bg-surface-2 p-3 text-center">
+                    <div className="text-xl font-black text-white font-mono">{globalStats.participants}</div>
+                    <div className="text-[10px] text-muted mt-1">{tr('참여자', 'Participants')}</div>
+                  </div>
+                  <div className="rounded-xl border border-border bg-surface-2 p-3 text-center">
+                    <div className="text-xl font-black text-white font-mono">{globalStats.totalBattles}</div>
+                    <div className="text-[10px] text-muted mt-1">{tr('누적 배틀', 'Total battles')}</div>
+                  </div>
+                  <div className="rounded-xl border border-border bg-surface-2 p-3 text-center min-w-0">
+                    <div className="text-sm font-black text-white truncate">{globalStats.topStockName}</div>
+                    <div className="text-[10px] text-muted mt-1 truncate">{globalStats.topStockSymbol} · {globalStats.topStockCount}{tr('회', '')}</div>
+                  </div>
                 </div>
+
+                {globalStats.humanWins + globalStats.aiWins > 0 ? (
+                  <>
+                    <div className="flex justify-between text-sm font-mono mb-2">
+                      <span className="text-human font-bold">{tr('인간', 'Human')} {globalStats.humanWins}{tr('승', ' wins')}</span>
+                      {globalStats.ties > 0 && <span className="text-muted">{tr('무승부', 'Draws')} {globalStats.ties}</span>}
+                      <span className="text-[#A78BFA] font-bold">AI {globalStats.aiWins}{tr('승', ' wins')}</span>
+                    </div>
+                    <div className="h-2 bg-border rounded-full overflow-hidden flex">
+                      <div
+                        className="bg-human h-full rounded-full transition-all"
+                        style={{ width: `${(globalStats.humanWins / (globalStats.humanWins + globalStats.aiWins)) * 100}%` }}
+                      />
+                      <div className="bg-[#A78BFA] h-full flex-1" />
+                    </div>
+                  </>
+                ) : (
+                  <div className="text-xs text-muted text-center">{tr('진행 중인 배틀이 끝나면 승률이 표시됩니다.', 'Win rates appear after active battles settle.')}</div>
+                )}
               </motion.div>
             )}
 

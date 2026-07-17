@@ -35,6 +35,7 @@ export default function LeaderboardPage() {
   const { tr } = useLocale()
   const [loading, setLoading] = useState(true)
   const [battles, setBattles] = useState<Battle[]>([])
+  const [allBattles, setAllBattles] = useState<Battle[]>([])
   const [nicknames, setNicknames] = useState<Record<string, string>>({})
   const [tab, setTab] = useState<'users' | 'stocks' | 'recent'>('users')
 
@@ -44,11 +45,15 @@ export default function LeaderboardPage() {
       if (!sb) return
 
       const [battlesRes, usersRes] = await Promise.all([
-        sb.from('battles').select('*').eq('status', 'resolved').order('created_at', { ascending: false }),
+        sb.from('battles').select('*').order('created_at', { ascending: false }),
         sb.from('battle_users').select('email, nickname'),
       ])
 
-      if (battlesRes.data) setBattles(battlesRes.data.map(r => parseBattle(r as Record<string, unknown>)))
+      if (battlesRes.data) {
+        const parsed = battlesRes.data.map(r => parseBattle(r as Record<string, unknown>))
+        setAllBattles(parsed)
+        setBattles(parsed.filter(battle => battle.status === 'resolved'))
+      }
       if (usersRes.data) {
         const map: Record<string, string> = {}
         usersRes.data.forEach((u: { email: string; nickname: string }) => { map[u.email] = u.nickname })
@@ -65,6 +70,14 @@ export default function LeaderboardPage() {
   const total = battles.length
   const userWinRate = total > 0 ? Math.round((userWinsTotal / total) * 100) : 0
   const aiWinRate = total > 0 ? Math.round((aiWinsTotal / total) * 100) : 0
+  const participantCount = new Set(allBattles.map(battle => battle.email)).size
+  const pendingCount = allBattles.filter(battle => battle.status === 'pending').length
+  const allStockCounts = new Map<string, { name: string; count: number }>()
+  allBattles.forEach(battle => {
+    const current = allStockCounts.get(battle.stock_symbol) ?? { name: battle.stock_name, count: 0 }
+    allStockCounts.set(battle.stock_symbol, { ...current, count: current.count + 1 })
+  })
+  const topStock = Array.from(allStockCounts.entries()).sort((a, b) => b[1].count - a[1].count)[0]
 
   // 유저별 통계
   const userMap: Record<string, UserStat> = {}
@@ -108,15 +121,15 @@ export default function LeaderboardPage() {
       <div className="max-w-2xl mx-auto px-6 py-8">
 
         <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}>
-          <h1 className="text-3xl font-black text-white mb-1">{tr('인간 vs AI', 'Human vs AI')}</h1>
-          <p className="text-muted text-sm mb-6">{tr('종료된 배틀의 전체 기록', 'All settled battle records')}</p>
+          <h1 className="text-3xl font-black text-white mb-1">{tr('전체 전적과 유저 랭킹', 'Records & User Ranking')}</h1>
+          <p className="text-muted text-sm mb-6">{tr('참여 현황부터 인간·AI 승률과 종목별 기록까지 한곳에서 확인하세요.', 'See participation, Human vs AI results, and stock-level records in one place.')}</p>
         </motion.div>
 
         {loading ? (
           <div className="flex justify-center py-32">
             <div className="w-8 h-8 border-2 border-accent border-t-transparent rounded-full animate-spin" />
           </div>
-        ) : total === 0 ? (
+        ) : allBattles.length === 0 ? (
           <div className="text-center py-32 space-y-4">
             <div className="text-5xl">⚔️</div>
             <p className="text-muted">{tr('아직 종료된 배틀이 없습니다.', 'No battles have settled yet.')}</p>
@@ -125,32 +138,67 @@ export default function LeaderboardPage() {
         ) : (
           <div className="space-y-6">
 
-            {/* 종합 스코어 */}
-            <div className="grid grid-cols-2 gap-3">
-              <div className="bg-up/8 border border-up/30 rounded-2xl p-5 text-center">
-                <div className="text-xs text-up font-mono mb-1">🧑 {tr('인간', 'Human')}</div>
-                <div className="text-4xl font-black text-white">{userWinRate}%</div>
-                <div className="text-muted text-xs font-mono mt-1">{userWinsTotal} {tr('승', 'wins')} / {total} {tr('전', 'battles')}</div>
+            {/* 전체 참여 현황 */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div className="bg-surface border border-border rounded-xl p-4">
+                <div className="text-xs text-muted mb-2">{tr('참여자', 'Participants')}</div>
+                <div className="text-3xl font-black text-white font-mono">{participantCount}</div>
+                <div className="text-[10px] text-muted mt-1">{tr('고유 이메일 기준', 'Unique accounts')}</div>
               </div>
-              <div className="bg-[#A78BFA]/8 border border-[#A78BFA]/30 rounded-2xl p-5 text-center">
-                <div className="text-xs text-[#A78BFA] font-mono mb-1">🤖 {tr('AI 투자 도구', 'AI investing tools')}</div>
-                <div className="text-4xl font-black text-white">{aiWinRate}%</div>
-                <div className="text-muted text-xs font-mono mt-1">{aiWinsTotal} {tr('승', 'wins')} / {total} {tr('전', 'battles')}</div>
+              <div className="bg-surface border border-border rounded-xl p-4">
+                <div className="text-xs text-muted mb-2">{tr('누적 배틀', 'Total battles')}</div>
+                <div className="text-3xl font-black text-white font-mono">{allBattles.length}</div>
+                <div className="text-[10px] text-muted mt-1">{tr('완료', 'Settled')} {total} · {tr('진행', 'Pending')} {pendingCount}</div>
+              </div>
+              <div className="bg-surface border border-border rounded-xl p-4 sm:col-span-2">
+                <div className="text-xs text-muted mb-2">{tr('가장 많이 참여한 종목', 'Most-battled stock')}</div>
+                <div className="flex items-end justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="text-xl font-black text-white truncate">{topStock?.[1].name ?? '-'}</div>
+                    <div className="text-xs text-muted font-mono truncate">{topStock?.[0] ?? ''}</div>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <div className="text-3xl font-black text-accent font-mono">{topStock?.[1].count ?? 0}</div>
+                    <div className="text-[10px] text-muted">{tr('배틀', 'battles')}</div>
+                  </div>
+                </div>
               </div>
             </div>
 
-            {/* 승률 바 */}
-            <div className="bg-surface border border-border rounded-2xl p-4">
-              <div className="flex justify-between text-xs font-mono mb-2">
-                <span className="text-up font-bold">{tr('인간', 'Human')} {userWinRate}%</span>
-                {tiesTotal > 0 && <span className="text-muted">{tr('무', 'Draws')} {tiesTotal}</span>}
-                <span className="text-[#A78BFA] font-bold">AI {aiWinRate}%</span>
+            {total > 0 ? (
+              <>
+                {/* 종합 스코어 */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="bg-up/8 border border-up/30 rounded-2xl p-5 text-center">
+                    <div className="text-xs text-up font-mono mb-1">🧑 {tr('인간', 'Human')}</div>
+                    <div className="text-4xl font-black text-white">{userWinRate}%</div>
+                    <div className="text-muted text-xs font-mono mt-1">{userWinsTotal} {tr('승', 'wins')} / {total} {tr('전', 'battles')}</div>
+                  </div>
+                  <div className="bg-[#A78BFA]/8 border border-[#A78BFA]/30 rounded-2xl p-5 text-center">
+                    <div className="text-xs text-[#A78BFA] font-mono mb-1">🤖 {tr('AI 투자 도구', 'AI investing tools')}</div>
+                    <div className="text-4xl font-black text-white">{aiWinRate}%</div>
+                    <div className="text-muted text-xs font-mono mt-1">{aiWinsTotal} {tr('승', 'wins')} / {total} {tr('전', 'battles')}</div>
+                  </div>
+                </div>
+
+                {/* 승률 바 */}
+                <div className="bg-surface border border-border rounded-2xl p-4">
+                  <div className="flex justify-between text-xs font-mono mb-2">
+                    <span className="text-up font-bold">{tr('인간', 'Human')} {userWinRate}%</span>
+                    {tiesTotal > 0 && <span className="text-muted">{tr('무', 'Draws')} {tiesTotal}</span>}
+                    <span className="text-[#A78BFA] font-bold">AI {aiWinRate}%</span>
+                  </div>
+                  <div className="h-4 bg-border rounded-full overflow-hidden flex">
+                    <motion.div initial={{ width: 0 }} animate={{ width: `${userWinRate}%` }} transition={{ duration: 1, ease: 'easeOut' }} className="bg-up" />
+                    <motion.div initial={{ width: 0 }} animate={{ width: `${aiWinRate}%` }} transition={{ duration: 1, ease: 'easeOut', delay: 0.2 }} className="bg-[#A78BFA]" />
+                  </div>
+                </div>
+              </>
+            ) : (
+              <div className="rounded-2xl border border-border bg-surface p-5 text-center text-sm text-muted">
+                {tr('진행 중인 배틀이 끝나면 인간과 AI의 승률이 표시됩니다.', 'Human and AI win rates appear after the active battles settle.')}
               </div>
-              <div className="h-4 bg-border rounded-full overflow-hidden flex">
-                <motion.div initial={{ width: 0 }} animate={{ width: `${userWinRate}%` }} transition={{ duration: 1, ease: 'easeOut' }} className="bg-up" />
-                <motion.div initial={{ width: 0 }} animate={{ width: `${aiWinRate}%` }} transition={{ duration: 1, ease: 'easeOut', delay: 0.2 }} className="bg-[#A78BFA]" />
-              </div>
-            </div>
+            )}
 
             {/* 탭 */}
             <div className="flex gap-1 bg-surface border border-border rounded-xl p-1">
