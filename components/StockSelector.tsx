@@ -82,7 +82,7 @@ export default function StockSelector({ onSelect, onBack }: StockSelectorProps) 
       <div>
         <div className="text-xs font-mono text-accent mb-2">{tr('종목 선택', 'Choose a stock')}</div>
         <h1 className="text-2xl font-black text-white">{tr('어떤 종목을 예측할까요?', 'Which stock will you predict?')}</h1>
-        <p className="text-muted text-sm mt-2">{tr('인기 종목을 고르거나 한국·미국 종목명과 티커를 검색하세요.', 'Choose a popular stock or search US and Korean listings by company name or ticker.')}</p>
+        <p className="text-muted text-sm mt-2">{tr('인기 종목을 고르거나 한국 종목코드·미국 회사명과 티커를 검색하세요.', 'Choose a popular stock, or search Korean codes and US company names or tickers.')}</p>
       </div>
 
       <div className="relative">
