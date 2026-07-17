@@ -1,12 +1,12 @@
 'use client'
 
 import { motion } from 'framer-motion'
-import { CURATED_STOCKS } from '@/lib/stocks'
+import type { StockChoice } from '@/lib/types'
 import { useLocale } from '@/components/LocaleProvider'
 import Button from '@vibe/design-system/components/ui/Button'
 
 interface DateSelectorProps {
-  symbol: string
+  stock: StockChoice
   onSelect: (date: string) => void
   onBack: () => void
 }
@@ -36,9 +36,8 @@ function getSelectableDates(): Array<{ date: string; label: string; dayName: str
   return results
 }
 
-export default function DateSelector({ symbol, onSelect, onBack }: DateSelectorProps) {
+export default function DateSelector({ stock, onSelect, onBack }: DateSelectorProps) {
   const { locale, tr } = useLocale()
-  const stock = CURATED_STOCKS.find(s => s.symbol === symbol)
   const dates = getSelectableDates()
 
   return (
@@ -47,7 +46,7 @@ export default function DateSelector({ symbol, onSelect, onBack }: DateSelectorP
       <div className="flex items-center gap-2 mb-6">
         <span>{stock?.market === 'KR' ? '🇰🇷' : '🇺🇸'}</span>
         <span className="text-white font-bold">{stock?.name}</span>
-        <span className="text-muted text-xs font-mono">{symbol}</span>
+        <span className="text-muted text-xs font-mono">{stock.symbol}</span>
       </div>
 
       <div className="rounded-xl border border-border bg-surface p-4">

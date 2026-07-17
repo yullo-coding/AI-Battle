@@ -1,5 +1,5 @@
-import type { StockAnalysis, StockQuote } from './types'
-import { CURATED_STOCKS } from './stocks'
+import type { StockAnalysis, StockChoice, StockQuote } from './types'
+import { CURATED_STOCKS, inferStockMarket, isSupportedStockSymbol } from './stocks'
 import {
   calculateRSI, calculateMACD, calculateBollingerBands, calculateMA,
 } from './indicators'
@@ -12,7 +12,51 @@ const yf = new YahooFinance({ suppressNotices: ['yahooSurvey'] }) as {
     quotes: Array<{ date: Date; open: number; high: number; low: number; close: number; volume: number }>
   }>
   quoteSummary: (symbol: string, opts: Record<string, unknown>) => Promise<Record<string, unknown>>
-  insights: (symbol: string) => Promise<Record<string, unknown>>
+  insights: (symbol: string, opts: Record<string, unknown>, moduleOpts: { validateResult: false }) => Promise<Record<string, unknown>>
+  search: (query: string, opts: Record<string, unknown>, moduleOpts: { validateResult: false }) => Promise<{
+    quotes?: Array<Record<string, unknown>>
+  }>
+}
+
+export async function searchStocks(query: string): Promise<StockChoice[]> {
+  const normalized = query.trim()
+  if (normalized.length < 2 || normalized.length > 60) return []
+
+  const localMatches: StockChoice[] = CURATED_STOCKS
+    .filter(stock => `${stock.name} ${stock.symbol}`.toLowerCase().includes(normalized.toLowerCase()))
+    .map(stock => ({ ...stock, exchange: stock.market === 'KR' ? 'Korea' : 'US', quoteType: 'EQUITY' }))
+
+  let remoteMatches: StockChoice[] = []
+  try {
+    if (/[가-힣]/.test(normalized)) return localMatches.slice(0, 8)
+    const result = await withTimeout(yf.search(normalized, {
+      quotesCount: 12,
+      newsCount: 0,
+      enableFuzzyQuery: true,
+    }, { validateResult: false }), 6000)
+
+    remoteMatches = (result.quotes ?? [])
+      .filter(item => item.quoteType === 'EQUITY' || item.quoteType === 'ETF')
+      .map(item => {
+        const symbol = String(item.symbol ?? '').toUpperCase()
+        return {
+          symbol,
+          name: String(item.longname ?? item.shortname ?? symbol),
+          market: inferStockMarket(symbol),
+          exchange: String(item.exchDisp ?? item.exchange ?? ''),
+          quoteType: item.quoteType as 'EQUITY' | 'ETF',
+        }
+      })
+      .filter(item => item.symbol && isSupportedStockSymbol(item.symbol))
+  } catch (error) {
+    console.warn(`[stocks] search ${normalized}:`, error instanceof Error ? error.message : error)
+  }
+
+  const unique = new Map<string, StockChoice>()
+  ;[...localMatches, ...remoteMatches].forEach(item => {
+    if (!unique.has(item.symbol)) unique.set(item.symbol, item)
+  })
+  return Array.from(unique.values()).slice(0, 8)
 }
 
 // ─── 기본 현재가 조회 ───────────────────────────────────────
@@ -33,7 +77,7 @@ export async function fetchStockQuote(symbol: string): Promise<StockQuote | null
       low52: (q.fiftyTwoWeekLow as number) ?? 0,
       volume: (q.regularMarketVolume as number) ?? 0,
       avgVolume: (q.averageDailyVolume3Month as number) ?? 0,
-      market: meta?.market ?? 'US',
+      market: meta?.market ?? inferStockMarket(symbol, q.currency),
     }
   } catch (err) {
     console.error(`[stocks] quote ${symbol}:`, err)
@@ -106,7 +150,7 @@ export async function fetchStockAnalysis(symbol: string): Promise<StockAnalysis 
         yf.quoteSummary(symbol, { modules: ['financialData', 'recommendationTrend'] }),
         8000
       ),
-      withTimeout(yf.insights(symbol), 5000),
+      withTimeout(yf.insights(symbol, {}, { validateResult: false }), 5000),
       fetchFearGreed(),
       fetchUsdKrwRate(),
     ])

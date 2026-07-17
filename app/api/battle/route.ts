@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { fetchStockAnalysis } from '@/lib/stocks.server'
 import { generateAIPrediction, type AIPrediction } from '@/lib/claude'
 import { getSupabaseServer } from '@/lib/supabase'
-import { CURATED_STOCKS } from '@/lib/stocks'
+import { isSupportedStockSymbol } from '@/lib/stocks'
 import { DEFAULT_TOOL_ID } from '@/lib/aiTools'
 import { getSupabaseAdmin } from '@/lib/supabase-admin.server'
 import { callExternalTool } from '@/lib/external-ai-tool.server'
@@ -24,14 +24,14 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: '필수 필드 누락' }, { status: 400 })
     }
 
-    const stock = CURATED_STOCKS.find(s => s.symbol === symbol)
-    if (!stock) {
+    const normalizedSymbol = symbol.trim().toUpperCase()
+    if (!isSupportedStockSymbol(normalizedSymbol)) {
       return NextResponse.json({ error: '지원하지 않는 종목' }, { status: 400 })
     }
 
     const selectedToolId = aiToolId ?? DEFAULT_TOOL_ID
 
-    const analysis = await fetchStockAnalysis(symbol)
+    const analysis = await fetchStockAnalysis(normalizedSymbol)
     if (!analysis) {
       return NextResponse.json({ error: '주가 데이터 조회 실패' }, { status: 500 })
     }
@@ -68,9 +68,9 @@ export async function POST(req: NextRequest) {
           endpointUrl: integration.endpoint_url,
           authToken: integration.auth_token,
         }, {
-          symbol,
-          stockName: stock.name,
-          market: stock.market,
+          symbol: normalizedSymbol,
+          stockName: analysis.quote.name,
+          market: analysis.quote.market,
           endDate,
           analysis,
         })
@@ -97,9 +97,9 @@ export async function POST(req: NextRequest) {
     const sb = getSupabaseServer()
     const { data, error } = await sb.from('battles').insert({
       email,
-      stock_symbol: symbol,
-      stock_name: stock.name,
-      stock_market: stock.market,
+      stock_symbol: normalizedSymbol,
+      stock_name: analysis.quote.name,
+      stock_market: analysis.quote.market,
       start_price: analysis.quote.price,
       end_date: endDate,
       user_change_percent: userChangePercent,

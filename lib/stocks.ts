@@ -11,6 +11,16 @@ export const CURATED_STOCKS = [
   { symbol: 'AMZN', name: 'Amazon', market: 'US' as const },
 ]
 
+export function inferStockMarket(symbol: string, currency?: unknown): 'US' | 'KR' {
+  return symbol.endsWith('.KS') || symbol.endsWith('.KQ') || currency === 'KRW' ? 'KR' : 'US'
+}
+
+export function isSupportedStockSymbol(symbol: string): boolean {
+  if (!/^[A-Z0-9.-]{1,24}$/.test(symbol)) return false
+  const dotIndex = symbol.indexOf('.')
+  return dotIndex === -1 || symbol.endsWith('.KS') || symbol.endsWith('.KQ')
+}
+
 export function formatPrice(price: number, market: 'US' | 'KR'): string {
   if (market === 'KR') return `₩${price.toLocaleString('ko-KR')}`
   return `$${price.toFixed(2)}`

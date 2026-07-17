@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { fetchStockAnalysis } from '@/lib/stocks.server'
-import { CURATED_STOCKS } from '@/lib/stocks'
+import { isSupportedStockSymbol } from '@/lib/stocks'
 
 export const maxDuration = 30  // Vercel 최대 실행시간 30초
 
@@ -8,8 +8,8 @@ export async function GET(
   _req: NextRequest,
   { params }: { params: { symbol: string } }
 ) {
-  const symbol = params.symbol
-  if (!CURATED_STOCKS.find(s => s.symbol === symbol)) {
+  const symbol = params.symbol.trim().toUpperCase()
+  if (!isSupportedStockSymbol(symbol)) {
     return NextResponse.json({ error: 'Unknown symbol' }, { status: 400 })
   }
 

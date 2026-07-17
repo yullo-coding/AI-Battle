@@ -89,6 +89,14 @@ export interface StockQuote {
   market: 'US' | 'KR'
 }
 
+export interface StockChoice {
+  symbol: string
+  name: string
+  market: 'US' | 'KR'
+  exchange?: string
+  quoteType?: 'EQUITY' | 'ETF'
+}
+
 // 종합 지표 (Step 3 대시보드용)
 export interface StockAnalysis {
   quote: StockQuote

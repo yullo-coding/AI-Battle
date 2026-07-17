@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import type { StockAnalysis } from '@/lib/types'
+import type { StockAnalysis, StockChoice } from '@/lib/types'
 import type { Battle } from '@/lib/types'
 import type { AIPrediction } from '@/lib/claude'
 import { loadSession } from '@/lib/storage'
@@ -26,6 +26,7 @@ export default function NewBattlePage() {
   const { locale, tr } = useLocale()
   const [step, setStep] = useState<Step>(1)
   const [symbol, setSymbol] = useState('')
+  const [selectedStock, setSelectedStock] = useState<StockChoice | null>(null)
   const [endDate, setEndDate] = useState('')
   const [analysis, setAnalysis] = useState<StockAnalysis | null>(null)
   const [analysisLoading, setAnalysisLoading] = useState(false)
@@ -66,7 +67,9 @@ export default function NewBattlePage() {
   }, [])
 
   // Step 2 → 3: 종목 선택 즉시 분석 데이터를 미리 불러온다.
-  function handleSelectStock(s: string) {
+  function handleSelectStock(stock: StockChoice) {
+    const s = stock.symbol
+    setSelectedStock(stock)
     setSymbol(s)
     setStep(3)
     setAnalysis(null)
@@ -182,11 +185,11 @@ export default function NewBattlePage() {
         {/* STEP 3 — 결과 확인일 선택 */}
         {step === 3 && (
           <motion.div key="step3" {...fadeSlide} className="max-w-2xl mx-auto px-6 py-8">
-            <DateSelector
-              symbol={symbol}
+            {selectedStock && <DateSelector
+              stock={selectedStock}
               onSelect={handleSelectDate}
               onBack={() => setStep(2)}
-            />
+            />}
           </motion.div>
         )}
 
