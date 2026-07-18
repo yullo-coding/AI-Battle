@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import Link from 'next/link'
 import { getSupabase } from '@/lib/supabase'
-import { loadSession } from '@/lib/storage'
+import { loadSession, restoreAuthenticatedSession } from '@/lib/storage'
 import type { Battle, UserSession } from '@/lib/types'
 import { parseBattle } from '@/lib/types'
 import BattleResultCard from '@/components/BattleResultCard'
@@ -30,7 +30,7 @@ export default function MyBattlesPage() {
       setSession(current)
       setSessionReady(true)
       if (current) {
-        loadBattles(current.email)
+        loadBattles(current.userId)
       } else {
         setBattles([])
         setLoading(false)
@@ -38,11 +38,20 @@ export default function MyBattlesPage() {
     }
 
     syncSession()
+    void restoreAuthenticatedSession().then(restored => {
+      setSession(restored)
+      setSessionReady(true)
+      if (restored) void loadBattles(restored.userId)
+    })
     window.addEventListener('session-change', syncSession)
-    return () => window.removeEventListener('session-change', syncSession)
+    window.addEventListener('storage', syncSession)
+    return () => {
+      window.removeEventListener('session-change', syncSession)
+      window.removeEventListener('storage', syncSession)
+    }
   }, [])
 
-  async function loadBattles(email: string) {
+  async function loadBattles(userId: string) {
     setLoading(true)
     const sb = getSupabase()
     if (!sb) { setLoading(false); return }
@@ -50,7 +59,7 @@ export default function MyBattlesPage() {
     const { data } = await sb
       .from('battles')
       .select('*')
-      .eq('email', email)
+      .eq('user_id', userId)
       .order('created_at', { ascending: false })
       .limit(50)
 
@@ -61,7 +70,7 @@ export default function MyBattlesPage() {
   function handleAuth(nextSession: UserSession) {
     setSession(nextSession)
     setShowAuth(false)
-    loadBattles(nextSession.email)
+    loadBattles(nextSession.userId)
   }
 
   const pending = battles.filter(battle => battle.status === 'pending')

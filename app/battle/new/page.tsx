@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import type { StockAnalysis, StockChoice } from '@/lib/types'
 import type { Battle } from '@/lib/types'
 import type { AIPrediction } from '@/lib/claude'
-import { loadSession } from '@/lib/storage'
+import { getAuthHeaders, loadSession, restoreAuthenticatedSession } from '@/lib/storage'
 import type { UserSession } from '@/lib/types'
 import StockSelector from '@/components/StockSelector'
 import DateSelector from '@/components/DateSelector'
@@ -20,6 +20,7 @@ import Button from '@vibe/design-system/components/ui/Button'
 import { useLocale } from '@/components/LocaleProvider'
 
 type Step = 1 | 2 | 3 | 4 | 5 | 6
+const PENDING_BATTLE_KEY = 'ai_battle_pending_submission'
 
 export default function NewBattlePage() {
   const { locale, tr } = useLocale()
@@ -43,19 +44,72 @@ export default function NewBattlePage() {
   const [currency, setCurrency] = useState<'KRW' | 'USD'>('KRW')
   const [aiTools, setAiTools] = useState<AITool[]>([])
   const [selectedToolId, setSelectedToolId] = useState(DEFAULT_TOOL_ID)
+  const [resumeAfterAuth, setResumeAfterAuth] = useState(false)
   const selectedTool = aiTools.find(tool => tool.id === selectedToolId) ?? DEFAULT_AI_TOOL
   const selectedToolCopy = localizedTool(selectedTool, locale)
 
   useEffect(() => {
+    try {
+      const rawDraft = window.localStorage.getItem(PENDING_BATTLE_KEY)
+      if (rawDraft) {
+        const draft = JSON.parse(rawDraft) as {
+          savedAt: number
+          symbol: string
+          selectedStock: StockChoice
+          endDate: string
+          userPercent: number
+          selectedToolId: string
+          currency: 'KRW' | 'USD'
+        }
+        if (Date.now() - draft.savedAt < 60 * 60 * 1000 && draft.symbol && draft.endDate) {
+          setSymbol(draft.symbol)
+          setSelectedStock(draft.selectedStock)
+          setEndDate(draft.endDate)
+          setUserPercent(draft.userPercent)
+          setSelectedToolId(draft.selectedToolId)
+          setCurrency(draft.currency)
+          setStep(4)
+          setAnalysisLoading(true)
+          setResumeAfterAuth(true)
+          fetch(`/api/stocks/${encodeURIComponent(draft.symbol)}`)
+            .then(response => { if (!response.ok) throw new Error(); return response.json() })
+            .then(data => { setAnalysis(data); setAnalysisLoading(false) })
+            .catch(() => { setAnalysisError(tr('주가 데이터를 불러오지 못했습니다. 다시 시도해주세요.', 'Could not load market data. Please try again.')); setAnalysisLoading(false) })
+        } else {
+          window.localStorage.removeItem(PENDING_BATTLE_KEY)
+        }
+      }
+    } catch {
+      window.localStorage.removeItem(PENDING_BATTLE_KEY)
+    }
+
     setSession(loadSession())
     setSessionReady(true)
+    void restoreAuthenticatedSession().then(restored => {
+      setSession(restored)
+      setSessionReady(true)
+    })
     const handler = () => {
       setSession(loadSession())
       setSessionReady(true)
     }
     window.addEventListener('session-change', handler)
-    return () => window.removeEventListener('session-change', handler)
+    window.addEventListener('storage', handler)
+    return () => {
+      window.removeEventListener('session-change', handler)
+      window.removeEventListener('storage', handler)
+    }
+    // 최초 진입에서만 초안을 복원하며 언어 변경으로 재제출하지 않는다.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  useEffect(() => {
+    if (!resumeAfterAuth || !session || analysisLoading || !analysis) return
+    setResumeAfterAuth(false)
+    void submitBattle()
+    // submitBattle은 최신 화면 상태를 사용하며, 재인증 복귀 시 한 번만 호출한다.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [resumeAfterAuth, session, analysisLoading, analysis])
 
   useEffect(() => {
     fetchAITools()
@@ -104,13 +158,17 @@ export default function NewBattlePage() {
 
   async function handleSubmitPrediction() {
     if (!session) {
+      window.localStorage.setItem(PENDING_BATTLE_KEY, JSON.stringify({
+        savedAt: Date.now(), symbol, selectedStock, endDate, userPercent, selectedToolId, currency,
+      }))
       setShowAuth(true)
       return
     }
-    await submitBattle(session.email)
+    await submitBattle()
   }
 
-  async function submitBattle(email: string) {
+  async function submitBattle() {
+    window.localStorage.removeItem(PENDING_BATTLE_KEY)
     setSubmitting(true)
     setSubmitError('')
     setStep(5)
@@ -120,11 +178,12 @@ export default function NewBattlePage() {
     const stepTimer2 = setTimeout(() => setAiStep(2), 2800)
 
     try {
+      const authHeaders = await getAuthHeaders()
       const res = await fetch('/api/battle', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...authHeaders },
         body: JSON.stringify({
-          email, symbol, endDate, userChangePercent: userPercent,
+          symbol, endDate, userChangePercent: userPercent,
           aiToolId: selectedToolId,
         }),
       })
@@ -156,7 +215,7 @@ export default function NewBattlePage() {
   function handleAuth(s: UserSession) {
     setSession(s)
     setShowAuth(false)
-    void submitBattle(s.email)
+    void submitBattle()
   }
 
   if (!sessionReady) {

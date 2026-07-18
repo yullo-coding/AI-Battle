@@ -6,12 +6,13 @@ import Button from '@vibe/design-system/components/ui/Button'
 import Card from '@vibe/design-system/components/ui/Card'
 import Input from '@vibe/design-system/components/ui/Input'
 import Textarea from '@vibe/design-system/components/ui/Textarea'
-import { loadSession } from '@/lib/storage'
+import { getAuthHeaders, loadSession, restoreAuthenticatedSession } from '@/lib/storage'
 import type { UserSession } from '@/lib/types'
 import EmailAuthModal from '@/components/EmailAuthModal'
 import { useLocale } from '@/components/LocaleProvider'
 
 const MARKET_OPTIONS = ['US', 'KR', 'EU', 'Crypto', 'FX', 'Global'] as const
+const PENDING_TOOL_KEY = 'ai_battle_pending_tool_submission'
 
 export default function NewToolPage() {
   const { locale, tr } = useLocale()
@@ -35,12 +36,47 @@ export default function NewToolPage() {
   const [previewLoading, setPreviewLoading] = useState(false)
   const [previewMessage, setPreviewMessage] = useState('')
   const [showDetails, setShowDetails] = useState(false)
+  const [resumeAfterAuth, setResumeAfterAuth] = useState(false)
   const mode = connectBattleApi ? 'api' : 'link'
 
   useEffect(() => {
+    try {
+      const rawDraft = window.localStorage.getItem(PENDING_TOOL_KEY)
+      if (rawDraft) {
+        const draft = JSON.parse(rawDraft) as {
+          savedAt: number; name: string; tagline: string; description: string; websiteUrl: string; logoUrl: string
+          pricing: 'free' | 'freemium' | 'paid'; connectBattleApi: boolean; supportedMarkets: string[]; endpointUrl: string
+        }
+        if (Date.now() - draft.savedAt < 60 * 60 * 1000) {
+          setName(draft.name); setTagline(draft.tagline); setDescription(draft.description); setWebsiteUrl(draft.websiteUrl)
+          setLogoUrl(draft.logoUrl); setPricing(draft.pricing); setConnectBattleApi(draft.connectBattleApi)
+          setSupportedMarkets(draft.supportedMarkets); setEndpointUrl(draft.endpointUrl)
+          setResumeAfterAuth(!draft.connectBattleApi)
+          if (draft.connectBattleApi) setStatus(tr('보안을 위해 API 인증 토큰만 다시 입력해주세요.', 'For security, please re-enter only your API token.'))
+        } else {
+          window.localStorage.removeItem(PENDING_TOOL_KEY)
+        }
+      }
+    } catch {
+      window.localStorage.removeItem(PENDING_TOOL_KEY)
+    }
     setSession(loadSession())
     setSessionReady(true)
+    void restoreAuthenticatedSession().then(restored => {
+      setSession(restored)
+      setSessionReady(true)
+    })
+    // 최초 진입에서만 초안을 복원하며 언어 변경으로 재등록하지 않는다.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  useEffect(() => {
+    if (!resumeAfterAuth || !session) return
+    setResumeAfterAuth(false)
+    void submitTool()
+    // submitTool은 복원된 최신 입력값으로 한 번만 호출한다.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [resumeAfterAuth, session])
 
   function toggleMarket(market: string) {
     setSupportedMarkets(current => current.includes(market)
@@ -87,22 +123,29 @@ export default function NewToolPage() {
 
   async function submit(e: FormEvent) {
     e.preventDefault()
-    if (!session) { setShowAuth(true); return }
+    if (!session) {
+      window.localStorage.setItem(PENDING_TOOL_KEY, JSON.stringify({
+        savedAt: Date.now(), name, tagline, description, websiteUrl: normalizedWebsiteUrl(), logoUrl,
+        pricing, connectBattleApi, supportedMarkets, endpointUrl,
+      }))
+      setShowAuth(true)
+      return
+    }
 
-    await submitTool(session)
+    await submitTool()
   }
 
-  async function submitTool(currentSession: UserSession) {
-
+  async function submitTool() {
+    window.localStorage.removeItem(PENDING_TOOL_KEY)
     setSubmitting(true)
     setError('')
     setStatus(mode === 'api' ? tr('제작자 API에 테스트 예측을 요청하는 중...', 'Requesting a test prediction from your API...') : tr('도구 정보를 등록하는 중...', 'Submitting your tool...'))
     try {
+      const authHeaders = await getAuthHeaders()
       const response = await fetch('/api/tools/register', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...authHeaders },
         body: JSON.stringify({
-          email: currentSession.email,
           name,
           tagline,
           description,
@@ -131,7 +174,7 @@ export default function NewToolPage() {
   function handleAuth(authenticatedSession: UserSession) {
     setSession(authenticatedSession)
     setShowAuth(false)
-    void submitTool(authenticatedSession)
+    void submitTool()
   }
 
   if (!sessionReady) {

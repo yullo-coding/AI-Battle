@@ -31,7 +31,7 @@ export default function BattleResultPage() {
     if (!sb) { setPageState('error'); setErrorMsg(tr('데이터베이스 연결 실패', 'Database connection failed')); return }
 
     const { data, error } = await sb
-      .from('battles')
+      .from('public_battles')
       .select('*')
       .eq('id', id)
       .single()

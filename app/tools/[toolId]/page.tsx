@@ -9,7 +9,7 @@ import Textarea from '@vibe/design-system/components/ui/Textarea'
 import Badge from '@vibe/design-system/components/ui/Badge'
 import { fetchAITool, localizedTool, toolAvailability } from '@/lib/aiTools'
 import { getSupabase } from '@/lib/supabase'
-import { loadSession } from '@/lib/storage'
+import { loadSession, restoreAuthenticatedSession } from '@/lib/storage'
 import type { AITool, AIToolReview, UserSession } from '@/lib/types'
 import EmailAuthModal from '@/components/EmailAuthModal'
 import { useLocale } from '@/components/LocaleProvider'
@@ -32,11 +32,11 @@ export default function ToolDetailPage() {
       const result = await fetchAITool(params.toolId)
       setTool(result.tool)
       setReviews(result.reviews)
-      const current = loadSession()
+      const current = loadSession() ?? await restoreAuthenticatedSession()
       setSession(current)
       if (current) {
         const sb = getSupabase()
-        const { data } = await sb!.from('ai_tool_likes').select('id').eq('tool_id', params.toolId).eq('user_email', current.email).maybeSingle()
+        const { data } = await sb!.from('ai_tool_likes').select('id').eq('tool_id', params.toolId).eq('user_id', current.userId).maybeSingle()
         setLiked(Boolean(data))
       }
     } catch { setError('도구를 불러오지 못했습니다.') }
@@ -50,9 +50,9 @@ export default function ToolDetailPage() {
     const sb = getSupabase()
     if (!sb || !tool) return
     if (liked) {
-      await sb.from('ai_tool_likes').delete().eq('tool_id', tool.id).eq('user_email', session.email)
+      await sb.from('ai_tool_likes').delete().eq('tool_id', tool.id).eq('user_id', session.userId)
     } else {
-      await sb.from('ai_tool_likes').insert({ tool_id: tool.id, user_email: session.email })
+      await sb.from('ai_tool_likes').insert({ tool_id: tool.id, user_id: session.userId, user_email: session.email })
     }
     setLiked(!liked)
     setTool({ ...tool, like_count: Math.max(0, (tool.like_count ?? 0) + (liked ? -1 : 1)) })
@@ -66,6 +66,7 @@ export default function ToolDetailPage() {
     if (!sb) return
     const { error: reviewError } = await sb.from('ai_tool_reviews').upsert({
       tool_id: tool.id,
+      user_id: session.userId,
       user_email: session.email,
       nickname: session.nickname,
       rating,

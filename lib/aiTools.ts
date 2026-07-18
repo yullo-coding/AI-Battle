@@ -6,7 +6,6 @@ export const DEFAULT_TOOL_ID = '00000000-0000-4000-8000-000000000001'
 
 export const DEFAULT_AI_TOOL: AITool = {
   id: DEFAULT_TOOL_ID,
-  owner_email: 'system@ai-battle.local',
   name: 'AI Battle 기본 분석기',
   name_en: 'AI Battle Core Analyzer',
   tagline: '기술적 지표를 조합해 설명 가능한 예측을 만드는 무료 도구',
@@ -43,27 +42,22 @@ export async function fetchAITools(): Promise<AITool[]> {
   let results
   try {
     results = await withTimeout(Promise.all([
-      sb.from('ai_tools').select('*').eq('is_published', true).order('is_featured', { ascending: false }).order('created_at', { ascending: false }),
-      sb.from('ai_tool_likes').select('tool_id'),
-      sb.from('ai_tool_reviews').select('tool_id,rating'),
+      sb.from('public_ai_tools').select('*').order('is_featured', { ascending: false }).order('created_at', { ascending: false }),
+      sb.from('ai_tool_public_stats').select('tool_id,like_count,review_count,average_rating'),
     ]))
   } catch {
     return [DEFAULT_AI_TOOL]
   }
-  const [{ data: tools, error }, { data: likes }, { data: reviews }] = results
+  const [{ data: tools, error }, { data: stats }] = results
   if (error || !tools) return [DEFAULT_AI_TOOL]
 
   return tools.map(tool => {
-    const toolLikes = likes?.filter(row => row.tool_id === tool.id).length ?? 0
-    const toolReviews = reviews?.filter(row => row.tool_id === tool.id) ?? []
-    const average = toolReviews.length
-      ? toolReviews.reduce((sum, row) => sum + Number(row.rating), 0) / toolReviews.length
-      : null
+    const toolStats = stats?.find(row => row.tool_id === tool.id)
     return {
       ...tool,
-      like_count: toolLikes,
-      review_count: toolReviews.length,
-      average_rating: average,
+      like_count: Number(toolStats?.like_count ?? 0),
+      review_count: Number(toolStats?.review_count ?? 0),
+      average_rating: toolStats?.average_rating == null ? null : Number(toolStats.average_rating),
     } as AITool
   })
 }
@@ -78,7 +72,7 @@ export async function fetchAITool(id: string): Promise<{ tool: AITool; reviews: 
   let reviewResult
   try {
     reviewResult = await withTimeout(
-      sb.from('ai_tool_reviews').select('*').eq('tool_id', id).order('created_at', { ascending: false })
+      sb.from('public_ai_tool_reviews').select('*').eq('tool_id', id).order('created_at', { ascending: false })
     )
   } catch {
     return { tool, reviews: [] }

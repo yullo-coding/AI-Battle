@@ -11,7 +11,7 @@ import Button from '@vibe/design-system/components/ui/Button'
 import { useLocale } from '@/components/LocaleProvider'
 
 interface UserStat {
-  email: string
+  id: string
   nickname: string
   total: number
   wins: number
@@ -36,7 +36,6 @@ export default function LeaderboardPage() {
   const [loading, setLoading] = useState(true)
   const [battles, setBattles] = useState<Battle[]>([])
   const [allBattles, setAllBattles] = useState<Battle[]>([])
-  const [nicknames, setNicknames] = useState<Record<string, string>>({})
   const [tab, setTab] = useState<'users' | 'stocks' | 'recent'>('users')
 
   useEffect(() => {
@@ -44,20 +43,12 @@ export default function LeaderboardPage() {
       const sb = getSupabase()
       if (!sb) return
 
-      const [battlesRes, usersRes] = await Promise.all([
-        sb.from('battles').select('*').order('created_at', { ascending: false }),
-        sb.from('battle_users').select('email, nickname'),
-      ])
+      const battlesRes = await sb.from('public_battles').select('*').order('created_at', { ascending: false })
 
       if (battlesRes.data) {
         const parsed = battlesRes.data.map(r => parseBattle(r as Record<string, unknown>))
         setAllBattles(parsed)
         setBattles(parsed.filter(battle => battle.status === 'resolved'))
-      }
-      if (usersRes.data) {
-        const map: Record<string, string> = {}
-        usersRes.data.forEach((u: { email: string; nickname: string }) => { map[u.email] = u.nickname })
-        setNicknames(map)
       }
       setLoading(false)
     }
@@ -70,7 +61,7 @@ export default function LeaderboardPage() {
   const total = battles.length
   const userWinRate = total > 0 ? Math.round((userWinsTotal / total) * 100) : 0
   const aiWinRate = total > 0 ? Math.round((aiWinsTotal / total) * 100) : 0
-  const participantCount = new Set(allBattles.map(battle => battle.email)).size
+  const participantCount = new Set(allBattles.map(battle => battle.player_id)).size
   const pendingCount = allBattles.filter(battle => battle.status === 'pending').length
   const allStockCounts = new Map<string, { name: string; count: number }>()
   allBattles.forEach(battle => {
@@ -82,14 +73,15 @@ export default function LeaderboardPage() {
   // 유저별 통계
   const userMap: Record<string, UserStat> = {}
   battles.forEach(b => {
-    if (!userMap[b.email]) {
-      userMap[b.email] = {
-        email: b.email,
-        nickname: nicknames[b.email] ?? b.email.split('@')[0],
+    const playerId = b.player_id ?? b.id
+    if (!userMap[playerId]) {
+      userMap[playerId] = {
+        id: playerId,
+        nickname: b.player_nickname ?? tr('익명 트레이더', 'Anonymous trader'),
         total: 0, wins: 0, losses: 0, ties: 0, winRate: 0, avgUserError: 0,
       }
     }
-    const u = userMap[b.email]
+    const u = userMap[playerId]
     u.total++
     if (b.winner === 'USER') u.wins++
     else if (b.winner === 'AI') u.losses++
@@ -98,7 +90,6 @@ export default function LeaderboardPage() {
   })
   const userStats: UserStat[] = Object.values(userMap).map(u => ({
     ...u,
-    nickname: nicknames[u.email] ?? u.nickname,
     winRate: u.total > 0 ? Math.round((u.wins / u.total) * 100) : 0,
     avgUserError: u.total > 0 ? parseFloat((u.avgUserError / u.total).toFixed(2)) : 0,
   })).sort((a, b) => b.winRate - a.winRate || b.wins - a.wins)
@@ -223,7 +214,7 @@ export default function LeaderboardPage() {
                   <p className="text-muted text-center py-8">{tr('데이터 없음', 'No data')}</p>
                 ) : userStats.map((u, i) => (
                   <motion.div
-                    key={u.email}
+                    key={u.id}
                     initial={{ opacity: 0, x: -16 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: i * 0.04 }}
@@ -300,7 +291,7 @@ export default function LeaderboardPage() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <span className="text-white font-medium">{b.stock_name}</span>
-                      <span className="text-muted text-xs font-mono ml-2">{nicknames[b.email] ?? tr('익명', 'Anonymous')}</span>
+                      <span className="text-muted text-xs font-mono ml-2">{b.player_nickname ?? tr('익명', 'Anonymous')}</span>
                     </div>
                     <div className="text-xs font-mono text-muted flex gap-2 flex-shrink-0">
                       <span className={b.user_change_percent != null && b.user_change_percent >= 0 ? 'text-up' : 'text-down'}>

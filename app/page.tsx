@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import Link from 'next/link'
 import { getSupabase } from '@/lib/supabase'
-import { loadSession, clearSession } from '@/lib/storage'
+import { loadSession, clearSession, restoreAuthenticatedSession } from '@/lib/storage'
 import type { UserSession } from '@/lib/types'
 import HeroSection from '@/components/HeroSection'
 import Button from '@vibe/design-system/components/ui/Button'
@@ -29,17 +29,22 @@ export default function HomePage() {
   useEffect(() => {
     const syncSession = () => setSession(loadSession())
     syncSession()
+    void restoreAuthenticatedSession().then(setSession)
     loadGlobalStats()
     window.addEventListener('session-change', syncSession)
-    return () => window.removeEventListener('session-change', syncSession)
+    window.addEventListener('storage', syncSession)
+    return () => {
+      window.removeEventListener('session-change', syncSession)
+      window.removeEventListener('storage', syncSession)
+    }
   }, [])
 
   async function loadGlobalStats() {
     const sb = getSupabase()
     if (!sb) return
     const { data } = await sb
-      .from('battles')
-      .select('email,winner,status,stock_symbol,stock_name')
+      .from('public_battles')
+      .select('player_id,winner,status,stock_symbol,stock_name')
     if (!data) return
 
     const resolvedRows = data.filter(row => row.status === 'resolved')
@@ -54,7 +59,7 @@ export default function HomePage() {
       humanWins: resolvedRows.filter(row => row.winner === 'USER').length,
       aiWins: resolvedRows.filter(row => row.winner === 'AI').length,
       ties: resolvedRows.filter(row => row.winner === 'TIE').length,
-      participants: new Set(data.map(row => row.email)).size,
+      participants: new Set(data.map(row => row.player_id)).size,
       totalBattles: data.length,
       topStockName: topStock?.[1].name ?? '-',
       topStockSymbol: topStock?.[0] ?? '',
@@ -62,8 +67,8 @@ export default function HomePage() {
     })
   }
 
-  function handleLogout() {
-    clearSession()
+  async function handleLogout() {
+    await clearSession()
     setSession(null)
   }
 

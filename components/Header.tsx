@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { AnimatePresence } from 'framer-motion'
 import Link from 'next/link'
-import { loadSession } from '@/lib/storage'
+import { loadSession, restoreAuthenticatedSession } from '@/lib/storage'
 import type { UserSession } from '@/lib/types'
 import ProfileModal from '@/components/ProfileModal'
 import EmailAuthModal from '@/components/EmailAuthModal'
@@ -18,9 +18,14 @@ export default function Header() {
 
   useEffect(() => {
     setSession(loadSession())
+    void restoreAuthenticatedSession().then(setSession)
     const handler = () => setSession(loadSession())
     window.addEventListener('session-change', handler)
-    return () => window.removeEventListener('session-change', handler)
+    window.addEventListener('storage', handler)
+    return () => {
+      window.removeEventListener('session-change', handler)
+      window.removeEventListener('storage', handler)
+    }
   }, [])
 
   function handleAuth(s: UserSession) {

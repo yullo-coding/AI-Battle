@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabase-admin.server'
 import { AI_TOOL_API_VERSION, verifyExternalTool } from '@/lib/external-ai-tool.server'
+import { AuthError, requireAuthenticatedUser } from '@/lib/auth.server'
 
 export const runtime = 'nodejs'
 export const maxDuration = 30
@@ -21,8 +22,9 @@ function httpsUrl(value: string, label: string): string {
 
 export async function POST(req: NextRequest) {
   try {
+    const user = await requireAuthenticatedUser(req)
     const body = await req.json() as Record<string, unknown>
-    const email = text(body.email, 320).toLowerCase()
+    const email = user.email!.trim().toLowerCase()
     const name = text(body.name, 60)
     const tagline = text(body.tagline, 120)
     const rawDescription = text(body.description, 2000)
@@ -41,7 +43,6 @@ export async function POST(req: NextRequest) {
       ? Array.from(new Set(body.supportedMarkets.map(value => text(value, 20)).filter(value => MARKETS.has(value)))).slice(0, 6)
       : []
 
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new Error('로그인 이메일을 확인해주세요.')
     if (name.length < 2 || tagline.length < 5) throw new Error('도구 이름과 한 줄 소개를 확인해주세요.')
     if (!PRICING.has(pricing)) throw new Error('가격 정책을 선택해주세요.')
     if (!supportedMarkets.length) throw new Error('지원 시장을 하나 이상 선택해주세요.')
@@ -57,6 +58,7 @@ export async function POST(req: NextRequest) {
 
     const admin = getSupabaseAdmin()
     const { data: tool, error: toolError } = await admin.from('ai_tools').insert({
+      owner_user_id: user.id,
       owner_email: email,
       name,
       tagline,
@@ -77,6 +79,7 @@ export async function POST(req: NextRequest) {
     if (mode === 'api') {
       const { error: integrationError } = await admin.from('ai_tool_integrations').insert({
         tool_id: tool.id,
+        owner_user_id: user.id,
         owner_email: email,
         endpoint_url: endpointUrl,
         auth_token: authToken || null,
@@ -97,6 +100,7 @@ export async function POST(req: NextRequest) {
     })
   } catch (error) {
     console.error('[tools/register]', error)
-    return NextResponse.json({ error: error instanceof Error ? error.message : '등록에 실패했습니다.' }, { status: 400 })
+    const status = error instanceof AuthError ? error.status : 400
+    return NextResponse.json({ error: error instanceof Error ? error.message : '등록에 실패했습니다.' }, { status })
   }
 }

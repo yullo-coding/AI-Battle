@@ -1,15 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { fetchClosingPriceForDate } from '@/lib/stocks.server'
-import { getSupabaseServer } from '@/lib/supabase'
+import { getSupabaseAdmin } from '@/lib/supabase-admin.server'
 import type { Battle } from '@/lib/types'
 import { canResolveBattle } from '@/lib/marketTime'
+import { publicBattle } from '@/lib/auth.server'
 
 export async function POST(
   _req: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
-    const sb = getSupabaseServer()
+    const sb = getSupabaseAdmin()
 
     const { data: battle, error: fetchErr } = await sb
       .from('battles')
@@ -24,7 +25,7 @@ export async function POST(
     const b = battle as Battle
 
     if (b.status === 'resolved') {
-      return NextResponse.json({ already: true, battle: b })
+      return NextResponse.json({ already: true, battle: publicBattle(b as unknown as Record<string, unknown>) })
     }
 
     // 거래소 장 마감 데이터가 공개된 뒤에만 판정한다.
@@ -73,7 +74,7 @@ export async function POST(
       return NextResponse.json({ error: '업데이트 실패' }, { status: 500 })
     }
 
-    return NextResponse.json({ battle: updated })
+    return NextResponse.json({ battle: publicBattle(updated as Record<string, unknown>) })
   } catch (err) {
     console.error('[resolve]', err)
     return NextResponse.json({ error: String(err) }, { status: 500 })

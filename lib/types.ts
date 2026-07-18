@@ -1,7 +1,10 @@
 // ─── 배틀 ────────────────────────────────────────────────────
 export interface Battle {
   id: string
-  email: string
+  email?: string
+  user_id?: string | null
+  player_id?: string
+  player_nickname?: string
 
   stock_symbol: string
   stock_name: string
@@ -30,7 +33,8 @@ export interface Battle {
 
 export interface AITool {
   id: string
-  owner_email: string
+  owner_email?: string
+  owner_user_id?: string | null
   name: string
   name_en: string | null
   tagline: string
@@ -56,7 +60,8 @@ export interface AITool {
 export interface AIToolReview {
   id: string
   tool_id: string
-  user_email: string
+  user_email?: string
+  user_id?: string | null
   nickname: string
   rating: number
   content: string
@@ -127,6 +132,7 @@ export interface StockAnalysis {
 
 // ─── 세션 ────────────────────────────────────────────────────
 export interface UserSession {
+  userId: string
   email: string
   phone: string
   nickname: string

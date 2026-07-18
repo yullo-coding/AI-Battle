@@ -1,26 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { fetchStockAnalysis } from '@/lib/stocks.server'
 import { generateAIPrediction, type AIPrediction } from '@/lib/claude'
-import { getSupabaseServer } from '@/lib/supabase'
 import { isSupportedStockSymbol } from '@/lib/stocks'
 import { DEFAULT_TOOL_ID } from '@/lib/aiTools'
 import { getSupabaseAdmin } from '@/lib/supabase-admin.server'
 import { callExternalTool } from '@/lib/external-ai-tool.server'
+import { AuthError, publicBattle, requireAuthenticatedUser } from '@/lib/auth.server'
 
 export const runtime = 'nodejs'
 export const maxDuration = 30
 
 export async function POST(req: NextRequest) {
   try {
-    const { email, symbol, endDate, userChangePercent, aiToolId } = await req.json() as {
-      email: string
+    const user = await requireAuthenticatedUser(req)
+    const { symbol, endDate, userChangePercent, aiToolId } = await req.json() as {
       symbol: string
       endDate: string
       userChangePercent: number
       aiToolId?: string
     }
 
-    if (!email || !symbol || !endDate || userChangePercent === undefined) {
+    if (!symbol || !endDate || userChangePercent === undefined) {
       return NextResponse.json({ error: '필수 필드 누락' }, { status: 400 })
     }
 
@@ -94,9 +94,10 @@ export async function POST(req: NextRequest) {
     }
 
     // Supabase에 저장
-    const sb = getSupabaseServer()
-    const { data, error } = await sb.from('battles').insert({
-      email,
+    const admin = getSupabaseAdmin()
+    const { data, error } = await admin.from('battles').insert({
+      user_id: user.id,
+      email: user.email!.toLowerCase(),
       stock_symbol: normalizedSymbol,
       stock_name: analysis.quote.name,
       stock_market: analysis.quote.market,
@@ -119,12 +120,13 @@ export async function POST(req: NextRequest) {
     }
 
     return NextResponse.json({
-      battle: data,
+      battle: publicBattle(data as Record<string, unknown>),
       aiPrediction,
       mode: aiPrediction.mode,
     })
   } catch (err) {
     console.error('[battle] POST:', err)
-    return NextResponse.json({ error: String(err) }, { status: 500 })
+    const status = err instanceof AuthError ? err.status : 500
+    return NextResponse.json({ error: err instanceof Error ? err.message : String(err) }, { status })
   }
 }

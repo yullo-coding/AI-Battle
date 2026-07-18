@@ -3,10 +3,11 @@
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import Link from 'next/link'
-import { getSupabase } from '@/lib/supabase'
 import { formatPrice, formatPercent } from '@/lib/stocks'
 import type { Battle } from '@/lib/types'
 import { parseBattle } from '@/lib/types'
+import { getAuthHeaders, restoreAuthenticatedSession } from '@/lib/storage'
+import EmailAuthModal from '@/components/EmailAuthModal'
 import Button from '@vibe/design-system/components/ui/Button'
 import { useLocale } from '@/components/LocaleProvider'
 
@@ -15,20 +16,32 @@ export default function AdminPage() {
   const [battles, setBattles] = useState<Battle[]>([])
   const [loading, setLoading] = useState(true)
   const [log, setLog] = useState('')
+  const [access, setAccess] = useState<'checking' | 'login' | 'denied' | 'allowed'>('checking')
+  const [showAuth, setShowAuth] = useState(false)
 
   async function fetchBattles() {
-    const sb = getSupabase()
-    if (!sb) return
-    const { data } = await sb
-      .from('battles')
-      .select('*')
-      .order('created_at', { ascending: false })
-      .limit(100)
-    if (data) setBattles(data.map(r => parseBattle(r as Record<string, unknown>)))
+    const headers = await getAuthHeaders()
+    const response = await fetch('/api/admin/battles', { headers })
+    if (response.status === 401) { setAccess('login'); setLoading(false); return }
+    if (response.status === 403) { setAccess('denied'); setLoading(false); return }
+    const result = await response.json() as { battles?: Record<string, unknown>[] }
+    if (response.ok && result.battles) {
+      setBattles(result.battles.map(parseBattle))
+      setAccess('allowed')
+    }
     setLoading(false)
   }
 
-  useEffect(() => { fetchBattles() }, [])
+  useEffect(() => {
+    void restoreAuthenticatedSession().then(session => {
+      if (!session) {
+        setAccess('login')
+        setLoading(false)
+        return
+      }
+      void fetchBattles()
+    })
+  }, [])
 
   async function resolveBattle(id: string) {
     setLog(tr(`배틀 ${id.slice(0, 8)}... 결과 집계 중`, `Resolving battle ${id.slice(0, 8)}...`))
@@ -50,11 +63,17 @@ export default function AdminPage() {
   }
 
   async function deleteBattle(id: string) {
-    const sb = getSupabase()
-    if (!sb) return
-    await sb.from('battles').delete().eq('id', id)
+    const headers = await getAuthHeaders()
+    const response = await fetch(`/api/admin/battles?id=${encodeURIComponent(id)}`, { method: 'DELETE', headers })
+    if (!response.ok) { setLog(tr('삭제 권한이 없거나 요청에 실패했습니다.', 'Delete failed or access was denied.')); return }
     setLog(tr(`배틀 ${id.slice(0, 8)}... 삭제됨`, `Battle ${id.slice(0, 8)}... deleted`))
     await fetchBattles()
+  }
+
+  function handleAuth() {
+    setShowAuth(false)
+    setLoading(true)
+    void fetchBattles()
   }
 
   const pending = battles.filter(b => b.status === 'pending')
@@ -62,6 +81,25 @@ export default function AdminPage() {
   const userWins = resolved.filter(b => b.winner === 'USER').length
   const aiWins = resolved.filter(b => b.winner === 'AI').length
   const ties = resolved.filter(b => b.winner === 'TIE').length
+
+  if (access === 'checking') {
+    return <main className="min-h-screen bg-bg flex items-center justify-center"><div className="w-9 h-9 border-2 border-accent border-t-transparent rounded-full animate-spin" /></main>
+  }
+
+  if (access === 'login' || access === 'denied') {
+    return (
+      <main className="min-h-screen bg-bg flex items-center justify-center px-6">
+        {showAuth && <EmailAuthModal onAuth={handleAuth} onClose={() => setShowAuth(false)} />}
+        <div className="max-w-md w-full bg-surface border border-border rounded-2xl p-8 text-center">
+          <div className="text-5xl mb-4">🔒</div>
+          <h1 className="text-2xl font-black text-white mb-2">{access === 'denied' ? tr('관리자 전용 페이지', 'Admin access only') : tr('관리자 로그인이 필요합니다', 'Admin sign-in required')}</h1>
+          <p className="text-sm text-muted mb-6">{access === 'denied' ? tr('현재 계정에는 관리자 권한이 없습니다.', 'This account does not have admin access.') : tr('인증된 관리자 이메일로 로그인해주세요.', 'Sign in with an authorized admin email.')}</p>
+          {access === 'login' && <Button className="w-full" onClick={() => setShowAuth(true)}>{tr('이메일 인증하기', 'Verify email')}</Button>}
+          <Link href="/" className="block mt-4 text-sm text-muted hover:text-white">← {tr('홈으로', 'Back home')}</Link>
+        </div>
+      </main>
+    )
+  }
 
   return (
     <main className="min-h-screen bg-bg p-6">

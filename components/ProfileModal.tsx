@@ -34,7 +34,11 @@ export default function ProfileModal({ session, onClose, onLogout, onUpdate }: P
   async function handleSave() {
     if (!nickname.trim() || nickname === session.nickname) return
     setSaving(true)
-    await updateNickname(session.email, nickname.trim())
+    const updatedOnServer = await updateNickname(session.userId, nickname.trim())
+    if (!updatedOnServer) {
+      setSaving(false)
+      return
+    }
     const updated = { ...session, nickname: nickname.trim() }
     saveSession(updated)
     onUpdate(updated)
@@ -43,8 +47,8 @@ export default function ProfileModal({ session, onClose, onLogout, onUpdate }: P
     setTimeout(() => setSaved(false), 2000)
   }
 
-  function handleLogout() {
-    clearSession()
+  async function handleLogout() {
+    await clearSession()
     onLogout()
     onClose()
   }
