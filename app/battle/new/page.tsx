@@ -13,7 +13,6 @@ import StockInfoPanel from '@/components/StockInfoPanel'
 import PredictionComposer from '@/components/PredictionComposer'
 import AIPredictionResult from '@/components/AIPredictionResult'
 import EmailAuthModal from '@/components/EmailAuthModal'
-import AuthEntryGate from '@/components/AuthEntryGate'
 import AIToolSelector from '@/components/AIToolSelector'
 import { DEFAULT_AI_TOOL, DEFAULT_TOOL_ID, fetchAITools, localizedTool } from '@/lib/aiTools'
 import type { AITool } from '@/lib/types'
@@ -157,21 +156,13 @@ export default function NewBattlePage() {
   function handleAuth(s: UserSession) {
     setSession(s)
     setShowAuth(false)
+    void submitBattle(s.email)
   }
 
   if (!sessionReady) {
     return (
       <main className="min-h-screen bg-bg flex items-center justify-center">
         <div className="h-10 w-10 rounded-full border-2 border-accent border-t-transparent animate-spin" />
-      </main>
-    )
-  }
-
-  if (!session) {
-    return (
-      <main className="min-h-screen bg-bg">
-        {showAuth && <EmailAuthModal onAuth={handleAuth} onClose={() => setShowAuth(false)} />}
-        <AuthEntryGate kind="battle" onLogin={() => setShowAuth(true)} />
       </main>
     )
   }

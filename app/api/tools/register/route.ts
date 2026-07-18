@@ -25,8 +25,15 @@ export async function POST(req: NextRequest) {
     const email = text(body.email, 320).toLowerCase()
     const name = text(body.name, 60)
     const tagline = text(body.tagline, 120)
-    const description = text(body.description, 2000)
+    const rawDescription = text(body.description, 2000)
+    const description = rawDescription.length >= 20
+      ? rawDescription
+      : body.locale === 'en'
+        ? `${tagline}. More details are available on the official website.`
+        : `${tagline}. 자세한 기능과 이용 방법은 공식 웹사이트에서 확인할 수 있습니다.`
     const websiteUrl = httpsUrl(text(body.websiteUrl, 500), '웹사이트')
+    const rawLogoUrl = text(body.logoUrl, 500)
+    const logoUrl = rawLogoUrl ? httpsUrl(rawLogoUrl, '대표 이미지') : null
     const pricing = text(body.pricing, 20)
     const connectBattleApi = body.connectBattleApi === true
     const mode = connectBattleApi ? 'api' : 'link'
@@ -35,7 +42,7 @@ export async function POST(req: NextRequest) {
       : []
 
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new Error('로그인 이메일을 확인해주세요.')
-    if (name.length < 2 || tagline.length < 5 || description.length < 20) throw new Error('도구 설명을 조금 더 자세히 입력해주세요.')
+    if (name.length < 2 || tagline.length < 5) throw new Error('도구 이름과 한 줄 소개를 확인해주세요.')
     if (!PRICING.has(pricing)) throw new Error('가격 정책을 선택해주세요.')
     if (!supportedMarkets.length) throw new Error('지원 시장을 하나 이상 선택해주세요.')
 
@@ -55,6 +62,7 @@ export async function POST(req: NextRequest) {
       tagline,
       description,
       website_url: websiteUrl,
+      logo_url: logoUrl,
       supported_markets: supportedMarkets,
       pricing,
       integration_type: mode,

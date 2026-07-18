@@ -9,7 +9,6 @@ import Textarea from '@vibe/design-system/components/ui/Textarea'
 import { loadSession } from '@/lib/storage'
 import type { UserSession } from '@/lib/types'
 import EmailAuthModal from '@/components/EmailAuthModal'
-import AuthEntryGate from '@/components/AuthEntryGate'
 import { useLocale } from '@/components/LocaleProvider'
 
 const MARKET_OPTIONS = ['US', 'KR', 'EU', 'Crypto', 'FX', 'Global'] as const
@@ -24,6 +23,7 @@ export default function NewToolPage() {
   const [tagline, setTagline] = useState('')
   const [description, setDescription] = useState('')
   const [websiteUrl, setWebsiteUrl] = useState('')
+  const [logoUrl, setLogoUrl] = useState('')
   const [pricing, setPricing] = useState<'free' | 'freemium' | 'paid'>('free')
   const [connectBattleApi, setConnectBattleApi] = useState(false)
   const [supportedMarkets, setSupportedMarkets] = useState<string[]>(['US', 'KR'])
@@ -32,6 +32,9 @@ export default function NewToolPage() {
   const [submitting, setSubmitting] = useState(false)
   const [status, setStatus] = useState('')
   const [error, setError] = useState('')
+  const [previewLoading, setPreviewLoading] = useState(false)
+  const [previewMessage, setPreviewMessage] = useState('')
+  const [showDetails, setShowDetails] = useState(false)
   const mode = connectBattleApi ? 'api' : 'link'
 
   useEffect(() => {
@@ -45,9 +48,51 @@ export default function NewToolPage() {
       : [...current, market])
   }
 
+  function normalizedWebsiteUrl() {
+    const value = websiteUrl.trim()
+    if (!value) return ''
+    return /^https:\/\//i.test(value) ? value : `https://${value}`
+  }
+
+  async function previewWebsite() {
+    const url = normalizedWebsiteUrl()
+    if (!url) {
+      setError(tr('웹사이트 링크를 먼저 입력해주세요.', 'Enter the website URL first.'))
+      return
+    }
+
+    setWebsiteUrl(url)
+    setPreviewLoading(true)
+    setPreviewMessage('')
+    setError('')
+    try {
+      const response = await fetch('/api/tools/preview', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ websiteUrl: url }),
+      })
+      const result = await response.json() as { name?: string; tagline?: string; description?: string; logoUrl?: string; error?: string }
+      if (!response.ok) throw new Error(result.error ?? tr('사이트 정보를 불러오지 못했습니다.', 'Could not read the website.'))
+      if (!name && result.name) setName(result.name)
+      if (!tagline && result.tagline) setTagline(result.tagline)
+      if (!description && result.description) setDescription(result.description)
+      if (result.logoUrl) setLogoUrl(result.logoUrl)
+      setPreviewMessage(tr('사이트 정보를 불러왔어요. 내용만 확인해주세요.', 'Website details loaded. Review and adjust them if needed.'))
+    } catch (previewError) {
+      setError(previewError instanceof Error ? previewError.message : tr('사이트 정보를 불러오지 못했습니다.', 'Could not read the website.'))
+    } finally {
+      setPreviewLoading(false)
+    }
+  }
+
   async function submit(e: FormEvent) {
     e.preventDefault()
     if (!session) { setShowAuth(true); return }
+
+    await submitTool(session)
+  }
+
+  async function submitTool(currentSession: UserSession) {
 
     setSubmitting(true)
     setError('')
@@ -57,11 +102,13 @@ export default function NewToolPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          email: session.email,
+          email: currentSession.email,
           name,
           tagline,
           description,
-          websiteUrl,
+          websiteUrl: normalizedWebsiteUrl(),
+          logoUrl,
+          locale,
           pricing,
           connectBattleApi,
           supportedMarkets,
@@ -81,6 +128,12 @@ export default function NewToolPage() {
     }
   }
 
+  function handleAuth(authenticatedSession: UserSession) {
+    setSession(authenticatedSession)
+    setShowAuth(false)
+    void submitTool(authenticatedSession)
+  }
+
   if (!sessionReady) {
     return (
       <main className="min-h-screen bg-bg flex items-center justify-center">
@@ -89,56 +142,98 @@ export default function NewToolPage() {
     )
   }
 
-  if (!session) {
-    return (
-      <main className="min-h-screen bg-bg">
-        {showAuth && <EmailAuthModal onAuth={s => { setSession(s); setShowAuth(false) }} onClose={() => setShowAuth(false)} />}
-        <AuthEntryGate kind="tool" onLogin={() => setShowAuth(true)} />
-      </main>
-    )
-  }
-
   return (
     <main className="min-h-screen bg-bg">
-      {showAuth && <EmailAuthModal onAuth={s => { setSession(s); setShowAuth(false) }} onClose={() => setShowAuth(false)} />}
+      {showAuth && <EmailAuthModal onAuth={handleAuth} onClose={() => setShowAuth(false)} />}
       <section className="max-w-3xl mx-auto px-6 py-12">
         <div className="mb-8">
           <p className="text-accent font-mono text-sm mb-2">{tr('제작자 등록', 'Builder Submission')}</p>
           <h1 className="text-3xl font-black text-white mb-3">{tr('내 AI 투자 도구 등록하기', 'Submit Your AI Investing Tool')}</h1>
-          <p className="text-muted">{tr('도구를 먼저 등록하고, 사용자가 바로 대결할 수 있게 하려면 배틀 API를 선택적으로 연결하세요.', 'Submit your tool first, then optionally connect a Battle API so users can battle it inside AI Battle.')}</p>
+          <p className="text-muted">{tr('링크를 넣으면 기본 정보를 자동으로 채워드려요. 로그인은 마지막 공개 단계에서만 필요합니다.', 'Paste a link and we will fill the basics. Sign-in is only required when you publish.')}</p>
         </div>
 
-        <Card className="mb-5 p-4 sm:p-5">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-accent/10 text-sm font-black text-accent">
-              {session.nickname.slice(0, 1).toUpperCase()}
+        {session ? (
+          <Card className="mb-5 p-4 sm:p-5">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-accent/10 text-sm font-black text-accent">
+                {session.nickname.slice(0, 1).toUpperCase()}
+              </div>
+              <div className="min-w-0">
+                <div className="text-xs text-muted">{tr('등록 계정', 'Submitting as')}</div>
+                <div className="font-bold text-white truncate">{session.nickname}</div>
+                <div className="text-xs text-muted font-mono truncate">{session.email}</div>
+              </div>
             </div>
-            <div className="min-w-0">
-              <div className="text-xs text-muted">{tr('등록 계정', 'Submitting as')}</div>
-              <div className="font-bold text-white truncate">{session.nickname}</div>
-              <div className="text-xs text-muted font-mono truncate">{session.email}</div>
+          </Card>
+        ) : (
+          <Card className="mb-5 border-accent/30 bg-accent/[0.04] p-4 sm:p-5">
+            <div className="flex items-start gap-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-accent/10 text-lg">✦</div>
+              <div>
+                <div className="font-bold text-white">{tr('먼저 작성해보세요', 'Start filling it out')}</div>
+                <p className="mt-1 text-xs leading-relaxed text-muted">
+                  {tr('작성한 내용은 그대로 유지되고, 공개 버튼을 누를 때 이메일로 로그인합니다.', 'Your work stays in place. You will sign in by email only when you publish.')}
+                </p>
+              </div>
             </div>
-          </div>
-        </Card>
+          </Card>
+        )}
 
         <Card>
           <form onSubmit={submit} className="space-y-6">
+            <div className="rounded-xl border border-accent/30 bg-accent/[0.04] p-4">
+              <div className="mb-1 text-xs font-mono font-bold text-accent">{tr('빠른 등록 · 필수 3개', 'Quick submit · 3 essentials')}</div>
+              <p className="text-xs leading-relaxed text-muted">{tr('웹사이트, 도구 이름, 한 줄 소개만 확인하면 등록할 수 있어요.', 'Confirm the website, tool name, and one-line description to publish.')}</p>
+            </div>
+
+            <div className="space-y-3">
+              <Input
+                label={tr('웹사이트 링크', 'Website')}
+                value={websiteUrl}
+                onChange={e => { setWebsiteUrl(e.target.value); setPreviewMessage('') }}
+                onBlur={() => { if (websiteUrl) setWebsiteUrl(normalizedWebsiteUrl()) }}
+                type="url"
+                required
+                placeholder="https://..."
+              />
+              <Button type="button" variant="secondary" className="w-full" disabled={previewLoading || !websiteUrl.trim()} onClick={previewWebsite}>
+                {previewLoading ? tr('사이트 정보 확인 중...', 'Reading website...') : tr('링크에서 이름·소개 자동으로 불러오기', 'Fill name and description from link')} →
+              </Button>
+              {previewMessage && <p className="text-xs text-accent">✓ {previewMessage}</p>}
+              {logoUrl && (
+                <div className="flex items-center gap-3 rounded-xl border border-border bg-surface-2 px-3 py-2.5">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={logoUrl} alt="" className="h-9 w-9 rounded-lg border border-border bg-white object-contain" />
+                  <span className="text-xs text-muted">{tr('사이트 대표 이미지도 함께 불러왔어요.', 'Site image loaded as well.')}</span>
+                </div>
+              )}
+            </div>
+
             <Input label={tr('도구 이름', 'Tool name')} value={name} onChange={e => setName(e.target.value)} minLength={2} maxLength={60} required placeholder={tr('예: 차트메이트 AI', 'e.g. ChartMate AI')} />
             <Input label={tr('한 줄 소개', 'Tagline')} value={tagline} onChange={e => setTagline(e.target.value)} minLength={5} maxLength={120} required placeholder={tr('누구에게 어떤 도움을 주는 도구인가요?', 'Who is it for, and what does it help them do?')} />
-            <Textarea label={tr('상세 설명', 'Description')} value={description} onChange={e => setDescription(e.target.value)} minLength={20} maxLength={2000} required currentLength={description.length} placeholder={tr('사용하는 데이터, 분석 방식, 지원 범위와 한계를 적어주세요.', 'Describe data sources, methodology, coverage, and limitations.')} />
-            <Input label={tr('웹사이트 링크', 'Website')} value={websiteUrl} onChange={e => setWebsiteUrl(e.target.value)} type="url" required placeholder="https://..." />
+            <div className="rounded-xl border border-border bg-surface-2 p-4">
+              <Button type="button" variant="ghost" className="w-full justify-between" onClick={() => setShowDetails(value => !value)} aria-expanded={showDetails}>
+                <span>{tr('상세 정보', 'More details')} <span className="text-muted">{tr('(선택)', '(optional)')}</span></span>
+                <span>{showDetails ? '−' : '+'}</span>
+              </Button>
 
-            <ChoiceGroup label={tr('가격 정책', 'Pricing')} options={[['free', tr('무료', 'Free')], ['freemium', tr('부분 무료', 'Freemium')], ['paid', tr('유료', 'Paid')]]} value={pricing} onChange={value => setPricing(value as typeof pricing)} />
+              {showDetails && (
+                <div className="mt-5 space-y-6 border-t border-border pt-5">
+                  <Textarea label={tr('상세 설명 (선택)', 'Description (optional)')} value={description} onChange={e => setDescription(e.target.value)} maxLength={2000} currentLength={description.length} placeholder={tr('사용하는 데이터, 분석 방식, 지원 범위와 한계를 적어주세요.', 'Describe data sources, methodology, coverage, and limitations.')} />
+                  <ChoiceGroup label={tr('가격 정책', 'Pricing')} options={[['free', tr('무료', 'Free')], ['freemium', tr('부분 무료', 'Freemium')], ['paid', tr('유료', 'Paid')]]} value={pricing} onChange={value => setPricing(value as typeof pricing)} />
 
-            <div>
-              <div className="text-xs text-muted font-mono tracking-widest uppercase mb-2">{tr('지원 시장', 'Supported markets')}</div>
-              <div className="flex flex-wrap gap-2">
-                {MARKET_OPTIONS.map(market => (
-                  <Button key={market} type="button" size="sm" variant={supportedMarkets.includes(market) ? 'primary' : 'secondary'} onClick={() => toggleMarket(market)}>
-                    {market}
-                  </Button>
-                ))}
-              </div>
+                  <div>
+                    <div className="text-xs text-muted font-mono tracking-widest uppercase mb-2">{tr('지원 시장', 'Supported markets')}</div>
+                    <div className="flex flex-wrap gap-2">
+                      {MARKET_OPTIONS.map(market => (
+                        <Button key={market} type="button" size="sm" variant={supportedMarkets.includes(market) ? 'primary' : 'secondary'} onClick={() => toggleMarket(market)}>
+                          {market}
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className={`rounded-xl border p-5 transition-colors ${connectBattleApi ? 'border-accent/50 bg-accent/[0.05]' : 'border-border bg-surface-2'}`}>
@@ -196,8 +291,13 @@ export default function NewToolPage() {
             <Button type="submit" size="lg" className="w-full" disabled={submitting || supportedMarkets.length === 0}>
               {submitting
                 ? (connectBattleApi ? tr('API 연결 테스트 중...', 'Testing API connection...') : tr('등록 중...', 'Submitting...'))
-                : (connectBattleApi ? tr('API 테스트하고 도구 등록', 'Test API & Submit Tool') : tr('AI 투자 도구 등록', 'Submit AI Investing Tool'))}
+                : !session
+                  ? tr('이메일 로그인 후 무료 공개', 'Sign in and publish for free')
+                  : (connectBattleApi ? tr('API 테스트하고 도구 등록', 'Test API & Submit Tool') : tr('AI 투자 도구 등록', 'Submit AI Investing Tool'))}
             </Button>
+            {!session && (
+              <p className="text-center text-[11px] text-muted">{tr('작성한 내용은 로그인 화면을 열어도 사라지지 않습니다.', 'Your entries stay in place while you sign in.')}</p>
+            )}
           </form>
         </Card>
       </section>
