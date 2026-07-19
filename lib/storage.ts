@@ -5,7 +5,11 @@ const KEYS = { session: 'ai_battle_session' }
 
 function safeLS() {
   if (typeof window === 'undefined') return null
-  return window.localStorage
+  try {
+    return window.localStorage ?? null
+  } catch {
+    return null
+  }
 }
 
 function notifySessionChange() {

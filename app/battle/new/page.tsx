@@ -22,6 +22,14 @@ import { useLocale } from '@/components/LocaleProvider'
 type Step = 1 | 2 | 3 | 4 | 5 | 6
 const PENDING_BATTLE_KEY = 'ai_battle_pending_submission'
 
+function browserStorage() {
+  try {
+    return window.localStorage ?? null
+  } catch {
+    return null
+  }
+}
+
 export default function NewBattlePage() {
   const { locale, tr } = useLocale()
   const [step, setStep] = useState<Step>(1)
@@ -49,8 +57,9 @@ export default function NewBattlePage() {
   const selectedToolCopy = localizedTool(selectedTool, locale)
 
   useEffect(() => {
+    const storage = browserStorage()
     try {
-      const rawDraft = window.localStorage.getItem(PENDING_BATTLE_KEY)
+      const rawDraft = storage?.getItem(PENDING_BATTLE_KEY)
       if (rawDraft) {
         const draft = JSON.parse(rawDraft) as {
           savedAt: number
@@ -76,11 +85,11 @@ export default function NewBattlePage() {
             .then(data => { setAnalysis(data); setAnalysisLoading(false) })
             .catch(() => { setAnalysisError(tr('주가 데이터를 불러오지 못했습니다. 다시 시도해주세요.', 'Could not load market data. Please try again.')); setAnalysisLoading(false) })
         } else {
-          window.localStorage.removeItem(PENDING_BATTLE_KEY)
+          storage?.removeItem(PENDING_BATTLE_KEY)
         }
       }
     } catch {
-      window.localStorage.removeItem(PENDING_BATTLE_KEY)
+      storage?.removeItem(PENDING_BATTLE_KEY)
     }
 
     setSession(loadSession())
@@ -158,7 +167,7 @@ export default function NewBattlePage() {
 
   async function handleSubmitPrediction() {
     if (!session) {
-      window.localStorage.setItem(PENDING_BATTLE_KEY, JSON.stringify({
+      browserStorage()?.setItem(PENDING_BATTLE_KEY, JSON.stringify({
         savedAt: Date.now(), symbol, selectedStock, endDate, userPercent, selectedToolId, currency,
       }))
       setShowAuth(true)
@@ -168,7 +177,7 @@ export default function NewBattlePage() {
   }
 
   async function submitBattle() {
-    window.localStorage.removeItem(PENDING_BATTLE_KEY)
+    browserStorage()?.removeItem(PENDING_BATTLE_KEY)
     setSubmitting(true)
     setSubmitError('')
     setStep(5)
